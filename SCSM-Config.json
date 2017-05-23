@@ -1,0 +1,14 @@
+{
+	"servername": "s2mscsmlab.s2.rpn.ch",
+
+	"script_root": "D:\\SCSM-Display\\Scripts\\",
+	"webpage_root": "D:\\SCSM-Display\\WebPage\\",
+
+	"smlets_path": "D:\\SCSM-Display\\Sources\\SMLets\\0.5.0.1\\SMLets.psd1",
+
+	"script_output": "D:\\SCSM-Display\\Output\\",
+
+	"ir_csv_file": "open_IR.csv",
+	"sr_csv_file": "open_SR.csv",
+	"log_file": "latest.log"
+}

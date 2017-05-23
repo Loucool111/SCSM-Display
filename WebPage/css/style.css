@@ -1,0 +1,42 @@
+/* 
+    Created on : 8 févr. 2017, 11:12:35
+    Author     : berretluc
+*/
+
+td:nth-child(1) {
+    font-weight: bold;
+}
+
+#IRUnassignedBody td:nth-child(3), #IRSLABody td:nth-child(3), #IRUnassignedBody td:last-child, #IRSLABody td:last-child {
+    text-align: center;
+}
+
+#IRUnassignedBody td:last-child {
+    color: green;
+}
+
+.IncidentUnassigned:nth-child(4), .UnassignedCell {
+    font-weight: bold;
+    color: #ff471a;
+}
+
+.table-animate {
+    overflow-y: auto;
+}
+
+div ::-webkit-scrollbar {
+    display: none;
+}
+
+html,body {
+    height: 100%;
+}
+
+.half-col {
+    height: 50%;
+}
+
+.custom-card {
+    margin-top: 20px;
+    height: 90%;
+}
