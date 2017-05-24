@@ -192,12 +192,16 @@ $FilteredSR = Filter-SRData -Collection $AllServiceRequests
 #Tri des incidents, par date de création descendante et si même date de création, par priorité ascendante
 $FilteredIR = $FilteredIR | Sort-Object @{Expression={$_.CreatedDate.Date};Descending=$true},@{Expression={$_.Priority};Ascending=$true}
 
-#Exportation des IR en CSV
-$FilteredIR | Export-Csv $IR_FILE -Delimiter ";" -Encoding UTF8 -NoTypeInformation
-Write-Host "Requête, tri et export des IR terminé sans erreurs."
+$UTF8NoBomEncoding =[System.Text.UTF8Encoding]::new($false)
 
-#Exportation des SR en CSV
-$FilteredSR | Export-Csv $SR_FILE -Delimiter ";" -Encoding UTF8 -NoTypeInformation
+#Exportation des IR en CSV (Encodage UTF-8 sans BOM)
+$FilteredIRCSV = $FilteredIR | ConvertTo-Csv -Delimiter ";" -NoTypeInformation
+[System.IO.File]::WriteAllText($IR_FILE, $FilteredIRCSV, $UTF8NoBomEncoding)
+Write-Host "Requête, tri et export des IR terminé dans erreurs."
+
+#Exportation des SR en CSV (Encodage UTF-8 sans BOM)
+$FilteredSRCSV = $FilteredSR | ConvertTo-Csv -Delimiter ";" -NoTypeInformation
+[System.IO.File]::WriteAllText($SR_FILE, $FilteredSRCSV, $UTF8NoBomEncoding)
 Write-Host "Requête, tri et export des SR terminé dans erreurs."
 
 #Création (si existe pas) et ajout de la DateTime::Now dans le fichier log
