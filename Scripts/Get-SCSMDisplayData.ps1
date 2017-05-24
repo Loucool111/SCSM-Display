@@ -59,14 +59,14 @@ try {
     exit
 }
 
-#Fonction qui permet de sortir les données pour les SR
-Function Get-SRData
+#Fonction qui permet de filtrer les données pour les SR
+Function Filter-SRData
 {
     Param([Object[]]$Collection) #En param -> tableau de toutes les SR BRUT.
     Process
     {
 		#Création du tableau de sortie
-        $Output = @()
+        $OutputSR = @()
 		
 		#Boucle à travers toutes les SR BRUTES
         foreach ($Item in $Collection)
@@ -78,11 +78,11 @@ Function Get-SRData
 			$CurrentAssignedUser = Get-SCSMRelatedObject -SMObject $Item -Relationship $AssignedUserRelClass -ErrorAction Stop
 			
 			#Récupération des données
-            $CurrentSR | Add-Member -Type NoteProperty -Name ID -Value $Item.Id                                 #ID
-            $CurrentSR | Add-Member -Type NoteProperty -Name Title -Value $Item.Title                           #Titre
+            $CurrentSR | Add-Member -Type NoteProperty -Name ID -Value $Item.Id                                    #ID
+            $CurrentSR | Add-Member -Type NoteProperty -Name Title -Value $Item.Title                              #Titre
             $CurrentSR | Add-Member -Type NoteProperty -Name AssignedUser -Value $CurrentAssignedUser.DisplayName  #Utilisateur attribué
-            $CurrentSR | Add-Member -Type NoteProperty -Name Priority -Value $Item.Priority.Name                #Priorité
-            $CurrentSR | Add-Member -Type NoteProperty -Name Source -Value $Item.Source.Name                    #Source
+            $CurrentSR | Add-Member -Type NoteProperty -Name Priority -Value $Item.Priority.Name                   #Priorité
+            $CurrentSR | Add-Member -Type NoteProperty -Name Source -Value $Item.Source.Name                       #Source
 
             #Pour la date de création, il faut la convertir en TimeZone locale puis, en format UNIX
             $CreatedDateTimestamp = [Math]::Floor([double]::Parse((Get-Date($Item.CreatedDate) -UFormat "%s")))
@@ -95,87 +95,109 @@ Function Get-SRData
             $CurrentSR | Add-Member -Type NoteProperty -Name EffectiveCreatedDate -Value $EffectiveCreatedDateTimestamp
 
 			#Ajoute de l'objet dans le tableau
-            $Output += $CurrentSR
+            $OutputSR += $CurrentSR
         }
-		#La fonction retourne le tableau
-        return $Output
+		#On retourne le tableau
+        return $OutputSR
     }
 }
 
-$OutputIR = @()
-
-#Pour chaque incident -> Récupération des données et sortie dans un tableau.
-foreach ($Item in $AllIncidents) {
-	#Récupération de l'utilisateur affecté, de l'utilisateur attribué et des objets SLA sur l'incident
-    $CurrentAffectedUser = Get-SCSMRelatedObject -SMObject $Item -Relationship $AffectedUserRelClass -ErrorAction Stop
-    $CurrentAssignedUser = Get-SCSMRelatedObject -SMObject $Item -Relationship $AssignedUserRelClass -ErrorAction Stop
-    $CurrentSLA = Get-SCSMRelatedObject -SMObject $Item -Relationship $SLARelClass -ErrorAction Stop
-
-    #Création de l'object qui sera inséré dans le tableau
-    $CurrentIncident = New-Object System.Object
-    
-    #Ajout des propriétés à l'objet
-
-    $CurrentIncident | Add-Member -Type NoteProperty -Name ID -Value $Item.Id                               #ID
-    $CurrentIncident | Add-Member -Type NoteProperty -Name Title -Value $Item.Title                         #Title
-    $CurrentIncident | Add-Member -Type NoteProperty -Name Priority -Value $Item.Priority                   #Priorité
-
-    #Pour l'utilisateur attribué, remplacement du texte par "Non attribué" si texte = null
-    if ($CurrentAssignedUser -eq $null) {
-        $CurrentIncident | Add-Member -Type NoteProperty -Name AssignedUser -Value "Non attribué"
-    } else {
-        $CurrentIncident | Add-Member -Type NoteProperty -Name AssignedUser -Value $CurrentAssignedUser.DisplayName #Assigned User
-    }
-
-    $CurrentIncident | Add-Member -Type NoteProperty -Name AffectedUser -Value $CurrentAffectedUser.DisplayName     #Affected User
-
-    #Pour la date de création, il faut la convertir en TimeZone locale puis, en temps UNIX
-    $CreatedDateTimestamp = [Math]::Floor([double]::Parse((Get-Date($Item.CreatedDate) -UFormat "%s")))
-    $CurrentIncident | Add-Member -Type NoteProperty -Name CreatedDate -Value $CreatedDateTimestamp
-
-    #Pour les SLA, si il y en a plusieurs, prendre celle qui est actuellement active.
-    $ActiveSLA = $null
-
-    if ($CurrentSLA -ne $null -and $CurrentSLA.GetType() -eq [Object[]]) {
-        foreach ($ItemSLA in $CurrentSLA)
-        {
-            if (-not $ItemSLA.IsCancelled) #Si plusieurs SLAs, prendre celle qui n'est pas "Annulée"
-            {
-                $ActiveSLA = $ItemSLA
-            }
-        }
-    } else {
-        $ActiveSLA = $CurrentSLA
-    }
-
-    $ActiveSLATimestamp = [Math]::Floor([double]::Parse((Get-Date($ActiveSLA.TargetEndDate) -UFormat "%s")))
-    $CurrentIncident | Add-Member -Type NoteProperty -Name SLAEndDate -Value $ActiveSLATimestamp           #Date de fin prévue
-    $CurrentIncident | Add-Member -Type NoteProperty -Name SLAStatus -Value $ActiveSLA.Status.Name         #Status SLA
-
-    $CurrentIncident | Add-Member -Type NoteProperty -Name Source -Value $Item.Source                      #Source
-
-    #Pour la notification sonore du nouvel incident -> il faut récuperer l'heure à laquelle le serveur à reçu les données.
-    $History = Get-SCSMObjectHistory -Object $Item
-    $EffectiveCreateDate = $History[0].History[0].LastModified
-    $EffectiveCreateTimestamp = [Math]::Floor([double]::Parse((Get-Date($EffectiveCreateDate) -UFormat "%s")))
-
-    #Ajout de l'objet de la date de création effective dans le tableau.
-    $CurrentIncident | Add-Member -Type NoteProperty -Name EffectiveCreateDate -Value $EffectiveCreateTimestamp         #Date de création effective
-
-    #Ajout de l'objet dans le tableau des incidents
-    $OutputIR += $CurrentIncident
+#Fonction qui permet de filtrer les données pour les IR
+Function Filter-IRData
+{
+	Param ([Object[]]$Collection) #En param -> tableau de tout les IR BRUT.
+	Process
+	{
+		$OutputIR = @()
+		
+		#Pour chaque incident -> Récupération des données et sortie dans un tableau.
+		foreach ($Item in $Collection)
+		{
+			#Récupération de l'utilisateur affecté, de l'utilisateur attribué et des objets SLA sur l'incident
+			$CurrentAffectedUser = Get-SCSMRelatedObject -SMObject $Item -Relationship $AffectedUserRelClass -ErrorAction Stop
+			$CurrentAssignedUser = Get-SCSMRelatedObject -SMObject $Item -Relationship $AssignedUserRelClass -ErrorAction Stop
+			$CurrentSLA = Get-SCSMRelatedObject -SMObject $Item -Relationship $SLARelClass -ErrorAction Stop
+			
+			#Création de l'object qui sera inséré dans le tableau
+			$CurrentIncident = New-Object System.Object
+			
+			#Ajout des propriétés à l'objet
+			
+			$CurrentIncident | Add-Member -Type NoteProperty -Name ID -Value $Item.Id #ID
+			$CurrentIncident | Add-Member -Type NoteProperty -Name Title -Value $Item.Title #Title
+			$CurrentIncident | Add-Member -Type NoteProperty -Name Priority -Value $Item.Priority #Priorité
+			
+			#Pour l'utilisateur attribué, remplacement du texte par "Non attribué" si texte = null
+			if ($CurrentAssignedUser -eq $null)
+			{
+				$CurrentIncident | Add-Member -Type NoteProperty -Name AssignedUser -Value "Non attribué"
+			}
+			else
+			{
+				$CurrentIncident | Add-Member -Type NoteProperty -Name AssignedUser -Value $CurrentAssignedUser.DisplayName #Assigned User
+			}
+			
+			$CurrentIncident | Add-Member -Type NoteProperty -Name AffectedUser -Value $CurrentAffectedUser.DisplayName #Affected User
+			
+			#Pour la date de création, il faut la convertir en TimeZone locale puis, en temps UNIX
+			$CreatedDateTimestamp = [Math]::Floor([double]::Parse((Get-Date($Item.CreatedDate) -UFormat "%s")))
+			$CurrentIncident | Add-Member -Type NoteProperty -Name CreatedDate -Value $CreatedDateTimestamp
+			
+			#Pour les SLA, si il y en a plusieurs, prendre celle qui est actuellement active.
+			$ActiveSLA = $null
+			
+			if ($CurrentSLA -ne $null -and $CurrentSLA.GetType() -eq [Object[]])
+			{
+				foreach ($ItemSLA in $CurrentSLA)
+				{
+					if (-not $ItemSLA.IsCancelled) #Si plusieurs SLAs, prendre celle qui n'est pas "Annulée"
+					{
+						$ActiveSLA = $ItemSLA
+					}
+				}
+			}
+			else
+			{
+				$ActiveSLA = $CurrentSLA
+			}
+			
+			$ActiveSLATimestamp = [Math]::Floor([double]::Parse((Get-Date($ActiveSLA.TargetEndDate) -UFormat "%s")))
+			$CurrentIncident | Add-Member -Type NoteProperty -Name SLAEndDate -Value $ActiveSLATimestamp #Date de fin prévue
+			$CurrentIncident | Add-Member -Type NoteProperty -Name SLAStatus -Value $ActiveSLA.Status.Name #Status SLA
+			
+			$CurrentIncident | Add-Member -Type NoteProperty -Name Source -Value $Item.Source #Source
+			
+			#Pour la notification sonore du nouvel incident -> il faut récuperer l'heure à laquelle le serveur à reçu les données.
+			$History = Get-SCSMObjectHistory -Object $Item
+			$EffectiveCreateDate = $History[0].History[0].LastModified
+			$EffectiveCreateTimestamp = [Math]::Floor([double]::Parse((Get-Date($EffectiveCreateDate) -UFormat "%s")))
+			
+			#Ajout de l'objet de la date de création effective dans le tableau.
+			$CurrentIncident | Add-Member -Type NoteProperty -Name EffectiveCreateDate -Value $EffectiveCreateTimestamp #Date de création effective
+			
+			#Ajout de l'objet dans le tableau des incidents
+			$OutputIR += $CurrentIncident
+		}
+		#On retourne le tableau
+		return $OutputIR
+	}
 }
+
+#Filtre des IR grâce à la fonction ci-dessus
+$FilteredIR = Filter-IRData -Collection $AllIncidents
+
+#Filtre des SR grâce à la fonction ci-dessus
+$FilteredSR = Filter-SRData -Collection $AllServiceRequests
 
 #Tri des incidents, par date de création descendante et si même date de création, par priorité ascendante
-$OutputIR = $OutputIR | Sort-Object @{Expression={$_.CreatedDate.Date};Descending=$true},@{Expression={$_.Priority};Ascending=$true}
+$FilteredIR = $FilteredIR | Sort-Object @{Expression={$_.CreatedDate.Date};Descending=$true},@{Expression={$_.Priority};Ascending=$true}
 
 #Exportation des IR en CSV
-$OutputIR | Export-Csv $IR_FILE -Delimiter ";" -Encoding UTF8 -NoTypeInformation
+$FilteredIR | Export-Csv $IR_FILE -Delimiter ";" -Encoding UTF8 -NoTypeInformation
 Write-Host "Requête, tri et export des IR terminé sans erreurs."
 
 #Exportation des SR en CSV
-$OutputSR = Get-SRData -Collection $AllServiceRequests
-$OutputSR | Export-Csv $SR_FILE -Delimiter ";" -Encoding UTF8 -NoTypeInformation
+$FilteredSR | Export-Csv $SR_FILE -Delimiter ";" -Encoding UTF8 -NoTypeInformation
 Write-Host "Requête, tri et export des SR terminé dans erreurs."
 
 #Création (si existe pas) et ajout de la DateTime::Now dans le fichier log
