@@ -43,7 +43,7 @@ $HTML_SR_Unassigned_Table = "";
 $HTML_SR_Assigned_Table = "";
 
 //Fonction qui convertit les dates unix en dates normales et qui change et timezone locale
-function convertTime($timestamp) {    
+function convertTime($timestamp) {
     $date = new DateTime();
     $date->setTimestamp($timestamp);
     $date->setTimezone(new DateTimeZone(date_default_timezone_get()));
@@ -53,6 +53,7 @@ function convertTime($timestamp) {
 //Création des tables pour les incidents
 if (($handle = fopen($OPENED_IR_FILE, "r")) !== FALSE) {
     while (($data = fgetcsv($handle, 0, ";")) !== FALSE) {
+        if (empty($data) || (count($data) === 1 && strlen($data[0]) === 3)) { break; }
         if ($data[2] != $SCSM_PRIORITY) {  //way to ignore the header
             if ($data[7] == $SCSM_STATUS_WARNING) {
                 $HTML_IR_SLA_Table .= "<tr class=\"alert-warning\" data-source=\"$data[8]\" data-effectivetimestamp=\"$data[9]\">";
@@ -116,6 +117,7 @@ function SortSRByAssignation($arrayToFill, $data) {
 //Création des tables pour les SR
 if (($handle = fopen($OPENED_SR_FILE, "r")) !== FALSE) {
     while (($data = fgetcsv($handle, 0, ";")) !== FALSE) {
+        if (empty($data) || (count($data) === 1 && strlen($data[0]) === 3)) { break; }
         if ($data[3] != $SCSM_PRIORITY) {
             if ($data[2] == null) {
                 if ($data[4] == $SCSM_STATUS_SOURCE_PORTAL) {
