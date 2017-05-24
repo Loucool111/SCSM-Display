@@ -25,26 +25,28 @@ $LOGFILEPATH = $OUTPUT_PATH + $Config.log_file
 $IR_FILE = $OUTPUT_PATH + $Config.ir_csv_file
 $SR_FILE = $OUTPUT_PATH + $Config.sr_csv_file
 
+$PSDefaultParameterValues = @{ "Get-SCSM*:ComputerName" = $SERVER }
+
 #Variables Globales : Etat des SR
-$SRStatusNew = Get-SCSMEnumeration -ComputerName $SERVER -Name "ServiceRequestStatusEnum.New"
-$SRStatusInProgress = Get-SCSMEnumeration -ComputerName $SERVER -Name "ServiceRequestStatusEnum.InProgress"
+$SRStatusNew = Get-SCSMEnumeration -Name "ServiceRequestStatusEnum.New"
+$SRStatusInProgress = Get-SCSMEnumeration -Name "ServiceRequestStatusEnum.InProgress"
 
 #Récupération de toutes les données BRUT et des classes qui permettront de lier les données ensembles.
 try {
-    $IRClass = Get-SCSMClass -ComputerName $SERVER -Name "System.WorkItem.Incident$"                               #Classe des IR
-    $SRClass = Get-SCSMClass -ComputerName $SERVER -Name "System.WorkItem.ServiceRequest$"                         #Classe des SR
+    $IRClass = Get-SCSMClass -Name "System.WorkItem.Incident$"                               #Classe des IR
+    $SRClass = Get-SCSMClass -Name "System.WorkItem.ServiceRequest$"                         #Classe des SR
 	
-    $AffectedUserRelClass = Get-SCSMRelationshipClass System.WorkItemAffectedUser$ -ComputerName $SERVER           #Classe de relation : utilisateur affecté
-    $AssignedUserRelClass = Get-SCSMRelationshipClass System.WorkItemAssignedToUser$ -ComputerName $SERVER         #Classe de relation : attribué à
-    $SLARelClass = Get-SCSMRelationshipClass System.WorkItemHasSLAInstanceInformation$ -ComputerName $SERVER       #Classe de relation : SLA
+    $AffectedUserRelClass = Get-SCSMRelationshipClass System.WorkItemAffectedUser$           #Classe de relation : utilisateur affecté
+    $AssignedUserRelClass = Get-SCSMRelationshipClass System.WorkItemAssignedToUser$         #Classe de relation : attribué à
+    $SLARelClass = Get-SCSMRelationshipClass System.WorkItemHasSLAInstanceInformation$       #Classe de relation : SLA
 
-    $IRStatusEnumActive = Get-SCSMEnumeration -ComputerName $SERVER -Name IncidentStatusEnum.Active                #Statis d'un IR : "Actif"
-    $SRStatusEnumInProgress = Get-SCSMEnumeration -ComputerName $SERVER -Name ServiceRequestStatusEnum.InProgress  #Status d'une SR : "En cours"
+    $IRStatusEnumActive = Get-SCSMEnumeration -Name IncidentStatusEnum.Active                #Statis d'un IR : "Actif"
+    $SRStatusEnumInProgress = Get-SCSMEnumeration -Name ServiceRequestStatusEnum.InProgress  #Status d'une SR : "En cours"
 
 	#Récuperation de tous les IR BRUTS qui sont actifs
-    $AllIncidents = Get-SCSMObject -ComputerName $SERVER -Class $IRClass | Where-Object { $_.Status.Ordinal -eq $IRStatusEnumActive[0].Ordinal}
+    $AllIncidents = Get-SCSMObject -Class $IRClass | Where-Object { $_.Status.Ordinal -eq $IRStatusEnumActive[0].Ordinal}
 	#Récuperation de toutes les SR qui sont en cours
-    $AllServiceRequests = Get-SCSMObject -ComputerName $SERVER -Class $SRClass | Where-Object { $_.Status.Ordinal -eq $SRStatusEnumInProgress[0].Ordinal }
+    $AllServiceRequests = Get-SCSMObject -Class $SRClass | Where-Object { $_.Status.Ordinal -eq $SRStatusEnumInProgress[0].Ordinal }
 } catch [Exception] {
 	#En cas d'erreur -> écrire l'erreur dans le log et quitter le script pour éviter les dégats
     Clear-Content -Path $LOGFILEPATH
@@ -73,7 +75,7 @@ Function Get-SRData
             $CurrentSR = New-Object System.Object
 			
 			#Récupération de l'utilisateur attribué
-			$CurrentAssignedUser = Get-SCSMRelatedObject -ComputerName $SERVER -SMObject $Item -Relationship $AssignedUserRelClass -ErrorAction Stop
+			$CurrentAssignedUser = Get-SCSMRelatedObject -SMObject $Item -Relationship $AssignedUserRelClass -ErrorAction Stop
 			
 			#Récupération des données
             $CurrentSR | Add-Member -Type NoteProperty -Name ID -Value $Item.Id                                 #ID
@@ -86,7 +88,7 @@ Function Get-SRData
             $CreatedDateTimestamp = [Math]::Floor([double]::Parse((Get-Date($Item.CreatedDate) -UFormat "%s")))
             $CurrentSR | Add-Member -Type NoteProperty -Name CreatedDate -Value $CreatedDateTimestamp
 
-            $History = Get-SCSMObjectHistory -ComputerName $SERVER -Object $Item
+            $History = Get-SCSMObjectHistory -Object $Item
             $EffectiveCreatedDate = ($History.History | Where-Object { ($_.Changes.OldValue.Value -eq $SRStatusNew) -and ($_.Changes.NewValue.Value -eq $SRStatusInProgress) }).LastModified
             $EffectiveCreatedDateTimestamp = [Math]::Floor([double]::Parse((Get-Date($EffectiveCreatedDate) -UFormat "%s")))
 
@@ -105,9 +107,9 @@ $OutputIR = @()
 #Pour chaque incident -> Récupération des données et sortie dans un tableau.
 foreach ($Item in $AllIncidents) {
 	#Récupération de l'utilisateur affecté, de l'utilisateur attribué et des objets SLA sur l'incident
-    $CurrentAffectedUser = Get-SCSMRelatedObject -ComputerName $SERVER -SMObject $Item -Relationship $AffectedUserRelClass -ErrorAction Stop
-    $CurrentAssignedUser = Get-SCSMRelatedObject -ComputerName $SERVER -SMObject $Item -Relationship $AssignedUserRelClass -ErrorAction Stop
-    $CurrentSLA = Get-SCSMRelatedObject -ComputerName $SERVER -SMObject $Item -Relationship $SLARelClass -ErrorAction Stop
+    $CurrentAffectedUser = Get-SCSMRelatedObject -SMObject $Item -Relationship $AffectedUserRelClass -ErrorAction Stop
+    $CurrentAssignedUser = Get-SCSMRelatedObject -SMObject $Item -Relationship $AssignedUserRelClass -ErrorAction Stop
+    $CurrentSLA = Get-SCSMRelatedObject -SMObject $Item -Relationship $SLARelClass -ErrorAction Stop
 
     #Création de l'object qui sera inséré dans le tableau
     $CurrentIncident = New-Object System.Object
@@ -153,7 +155,7 @@ foreach ($Item in $AllIncidents) {
     $CurrentIncident | Add-Member -Type NoteProperty -Name Source -Value $Item.Source                      #Source
 
     #Pour la notification sonore du nouvel incident -> il faut récuperer l'heure à laquelle le serveur à reçu les données.
-    $History = Get-SCSMObjectHistory -ComputerName $SERVER -Object $Item
+    $History = Get-SCSMObjectHistory -Object $Item
     $EffectiveCreateDate = $History[0].History[0].LastModified
     $EffectiveCreateTimestamp = [Math]::Floor([double]::Parse((Get-Date($EffectiveCreateDate) -UFormat "%s")))
 
