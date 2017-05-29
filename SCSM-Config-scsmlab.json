@@ -4,8 +4,6 @@
 	"script_root": "C:\\inetpub\\wwwroot\\SCSM-Display\\Scripts\\",
 	"webpage_root": "C:\\inetpub\\wwwroot\\SCSM-Display\\WebPage\\",
 
-	"smlets_path": "C:\\inetpub\\wwwroot\\SCSM-Display\\Sources\\SMLets\\0.5.0.1\\SMLets.psd1",
-
 	"script_output": "C:\\inetpub\\wwwroot\\SCSM-Display\\Output\\",
 
 	"ir_csv_file": "open_IR.csv",

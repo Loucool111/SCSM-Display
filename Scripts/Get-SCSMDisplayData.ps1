@@ -1,7 +1,7 @@
 ﻿<#
   Script de récupération de données pour SCSM
   Crée par Berret Luca (LUB)
-  Dernière modification le 22.05.2017
+  Dernière modification le 29.05.2017
 #>
 
 #Récupération du chemin où le script est exéctué.
@@ -9,8 +9,9 @@ $ScriptPath = Split-Path -Parent $PSScriptRoot
 $Config = Get-Content -Path $ScriptPath\SCSM-Config.json | Out-String | ConvertFrom-Json    #Récupération des données de config depuis le fichier .json
 
 #Importation du module SMLetls si il n'est pas déja chargé
-if (Get-Module -Name SMLets) {
-    Import-Module -Name $Config.smlets_path -Force
+if (!(Get-Module -Name SMLets)) {
+    #Import-Module -Name $Config.smlets_path -Force
+    Import-Module -Name SMLets
     Write-Host "Module imported"
 } else {
     Write-Host "Module already imported"
@@ -161,10 +162,13 @@ Function Filter-IRData
 				$ActiveSLA = $CurrentSLA
 			}
 			
-			$ActiveSLATimestamp = [Math]::Floor([double]::Parse((Get-Date($ActiveSLA.TargetEndDate) -UFormat "%s")))
-			$CurrentIncident | Add-Member -Type NoteProperty -Name SLAEndDate -Value $ActiveSLATimestamp #Date de fin prévue
-			$CurrentIncident | Add-Member -Type NoteProperty -Name SLAStatus -Value $ActiveSLA.Status.Name #Status SLA
-			
+            #Quand les SLA n'ont pas étés appliqués, on n'exporte pas ces 2 propriétés.
+            if ($ActiveSLA) {
+			    $ActiveSLATimestamp = [Math]::Floor([double]::Parse((Get-Date($ActiveSLA.TargetEndDate) -UFormat "%s")))
+			    $CurrentIncident | Add-Member -Type NoteProperty -Name SLAEndDate -Value $ActiveSLATimestamp #Date de fin prévue
+			    $CurrentIncident | Add-Member -Type NoteProperty -Name SLAStatus -Value $ActiveSLA.Status.Name #Status SLA
+			}
+
 			$CurrentIncident | Add-Member -Type NoteProperty -Name Source -Value $Item.Source #Source
 			
 			#Pour la notification sonore du nouvel incident -> il faut récuperer l'heure à laquelle le serveur à reçu les données.
@@ -192,16 +196,25 @@ $FilteredSR = Filter-SRData -Collection $AllServiceRequests
 #Tri des incidents, par date de création descendante et si même date de création, par priorité ascendante
 $FilteredIR = $FilteredIR | Sort-Object @{Expression={$_.CreatedDate.Date};Descending=$true},@{Expression={$_.Priority};Ascending=$true}
 
-$UTF8NoBomEncoding =[System.Text.UTF8Encoding]::new($false)
+#Création de l'objet UTF8Encoding sans BOM
+$UTF8NoBomEncoding = New-Object -TypeName System.Text.UTF8Encoding -ArgumentList $false
 
 #Exportation des IR en CSV (Encodage UTF-8 sans BOM)
 $FilteredIRCSV = $FilteredIR | ConvertTo-Csv -Delimiter ";" -NoTypeInformation
-[System.IO.File]::WriteAllText($IR_FILE, $FilteredIRCSV, $UTF8NoBomEncoding)
+
+#Pour éviter les erreurs, on export uniquement si le tableau n'est pas vide
+if ($FilteredIRCSV) {
+    [System.IO.File]::WriteAllLines($IR_FILE, $FilteredIRCSV, $UTF8NoBomEncoding)
+}
 Write-Host "Requête, tri et export des IR terminé dans erreurs."
 
 #Exportation des SR en CSV (Encodage UTF-8 sans BOM)
 $FilteredSRCSV = $FilteredSR | ConvertTo-Csv -Delimiter ";" -NoTypeInformation
-[System.IO.File]::WriteAllText($SR_FILE, $FilteredSRCSV, $UTF8NoBomEncoding)
+
+#Pour éviter les erreurs, on export uniquement si le tableau n'est pas vide
+if ($FilteredSRCSV) {
+    [System.IO.File]::WriteAllLines($SR_FILE, $FilteredSRCSV, $UTF8NoBomEncoding)    
+}
 Write-Host "Requête, tri et export des SR terminé dans erreurs."
 
 #Création (si existe pas) et ajout de la DateTime::Now dans le fichier log
