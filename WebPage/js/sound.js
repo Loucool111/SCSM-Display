@@ -31,6 +31,20 @@ function checkNewIR() {
 
         console.log("IRID : " + IRID + ", IRDate : " + IRDate + ", NowUTC : " + NowUTC + ", diff : " + (NowUTC - IRDate) + ", IRSource : " + IRSource);
 
+        var LatestUpdate = $("#latest-update").data('timestamp');
+        console.log("Latest Update Server : " + LatestUpdate);
+        console.log("Latest Update Client : " + NowUTC);
+        var DiffCltSrv = (NowUTC - LatestUpdate);
+        console.log("Diff srv-ctl : " + DiffCltSrv);
+        
+        //Pour test de notifs : ajout du décalage client-serveur
+        if (DiffCltSrv < 60) {
+            NowUTC -= DiffCltSrv;
+            console.log("Diff. Ctl-Srv prise en compte.");
+        } else {
+            console.log ("Diff. Ctl-Srv trop grande -> pas prise en compte.");
+        }
+        
         if ((NowUTC - IRDate) < 60) {
             if (IRSource === "IncidentSourceEnum.Portal") {
                 areNewIRPortal = true;

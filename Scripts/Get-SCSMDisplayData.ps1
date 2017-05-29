@@ -221,12 +221,14 @@ Write-Host "Requête, tri et export des SR terminé dans erreurs."
 if (Test-Path -Path $LOGFILEPATH)
 {
     Clear-Content -Path $LOGFILEPATH
-    Add-Content -Path $LOGFILEPATH -Value ([DateTime]::Now)
+    $Date = "{0}={1}" -f [Math]::Floor([double]::Parse((Get-Date -UFormat %s))), [DateTime]::Now
+    Add-Content -Path $LOGFILEPATH -Value $Date
 }
 else
 {
     New-Item -Path $LOGFILEPATH -ItemType File | Out-Null
-    Add-Content -Path $LOGFILEPATH -Value ([DateTime]::Now)
+    $Date = "{0}={1}" -f [Math]::Floor([double]::Parse((Get-Date -UFormat %s))), [DateTime]::Now
+    Add-Content -Path $LOGFILEPATH -Value $Date
 }
 
 #Suppressions du module SMLets

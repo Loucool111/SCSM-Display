@@ -44,10 +44,14 @@ $HTML_SR_Assigned_Table = "";
 
 //Fonction qui convertit les dates unix en dates normales et qui change et timezone locale
 function convertTime($timestamp) {
-    $date = new DateTime();
-    $date->setTimestamp($timestamp);
-    $date->setTimezone(new DateTimeZone(date_default_timezone_get()));
-    return $date->format('d.m.Y H:i:s');
+    if ($timestamp !== '') {
+        $date = new DateTime();
+        $date->setTimestamp($timestamp);
+        $date->setTimezone(new DateTimeZone(date_default_timezone_get()));
+        return $date->format('d.m.Y H:i:s');
+    } else {
+        return "Aucunes SLA";
+    }
 }
 
 //Création des tables pour les incidents
@@ -136,7 +140,10 @@ foreach ($SCSM_PRIORITY_TRANSLATIONS as $key => $value) {
 
 //Affichage de la "Last Update"
 $update_file = fopen($LATEST_UPDATE_FILE, "r") or die("Unable to open " . $config["log_file"] . " file!");
-$latest_update_date = fread($update_file, filesize($LATEST_UPDATE_FILE));
+$latest_update_text = fread($update_file, filesize($LATEST_UPDATE_FILE));
+$latest_update_table = explode('=', $latest_update_text);
+$latest_update_timestamp = $latest_update_table[0];
+$latest_update_date = $latest_update_table[1];
 fclose($update_file);
 ?>
 <!DOCTYPE html>
@@ -162,7 +169,7 @@ fclose($update_file);
             <a class="navbar-brand" href="#"><i class="fa fa-windows"></i> SCSM Display</a>
             <div class="collapse navbar-collapse" id="navbarText">
                 <ul class="navbar-nav mr-auto"></ul>
-                <span class="navbar-text">Dernière mise à jour : <?= $latest_update_date; ?></span>
+                <span class="navbar-text">Dernière MàJ des données : <span id="latest-update" data-timestamp="<?= $latest_update_timestamp; ?>"><?= $latest_update_date; ?></span></span>
             </div>
         </nav>
         <div class="container-fluid" style="height: 92%;">
