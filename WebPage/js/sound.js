@@ -1,3 +1,4 @@
+//Récupération des objets audio
 var IRUnassigned = $("#IR-Unassigned")[0];
 var SRUnassigned = $("#SR-Unassigned")[0];
 var IRViolation = $("#IR-Violation")[0];
@@ -6,23 +7,26 @@ var NewIR = $("#New-IR")[0];
 var NewIRPortal = $("#New-IR-Portal")[0];
 var NewSRPortal = $("#New-SR-Portal")[0];
 
-//Récup le nombre d'IR et SR non-attribués.
-var numberUnassignedIR = 0;
-var numberUnassignedSR = 0;
+//Création de variables pour le nombre de IR, SR non attribués.
+var IRUnassignedCount = 0;
+var SRUnassignedCount = 0;
 
-//Récup des violations et warning
-var numberViolation = 0;
-var numberWarning = 0;
+//Création de variables pour le nombre de IR et avertissement / violation.
+var IRViolationCount = 0;
+var IRWarningCount = 0;
 
 //Variable qui définit si il y a des nouveaux incidents afin de ne pas jouer le son "il y a x incident encore non attribués...."
-var areNewIR = false;
-var areNewIRPortal = false;
-var areNewSR = false;
+var AreNewIR = false;
+var AreNewIRPortal = false;
+var AreNewSR = false;
 
 function checkNewIR() {
+    //Pour chaque item dans le tableau
     $("#IRUnassignedBody > tr").each(function () {
+        //Récup de la date de création effective
         var IRDate = $(this).data("effectivetimestamp");
-
+        
+        //Récup de l'heure actuelle en temps UNIX
         var Now = new Date();
         var NowUTC = Math.floor(Date.UTC(Now.getFullYear(), Now.getMonth(), Now.getDate(), Now.getHours(), Now.getMinutes(), Now.getSeconds(), Now.getMilliseconds()) / 1000);
 
@@ -36,20 +40,24 @@ function checkNewIR() {
         console.log("Latest Update Client : " + NowUTC);
         var DiffCltSrv = (NowUTC - LatestUpdate);
         console.log("Diff srv-ctl : " + DiffCltSrv);
-        
-        //Pour test de notifs : ajout du décalage client-serveur
+
+        //Prise en compte du décalage entre le client et le serveur
         if (DiffCltSrv < 60) {
+            //Si moins de 60 secondes de décalage client-serveur on soustrait la différence de l'heure atuelle
             NowUTC -= DiffCltSrv;
             console.log("Diff. Ctl-Srv prise en compte.");
         } else {
-            console.log ("Diff. Ctl-Srv trop grande -> pas prise en compte.");
+            console.log("Diff. Ctl-Srv trop grande -> pas prise en compte.");
         }
-        
+
+        //Test que la date de création effective de l'incident est moins de 60 secondes (décalage déjà soustrait)
         if ((NowUTC - IRDate) < 60) {
             if (IRSource === "IncidentSourceEnum.Portal") {
-                areNewIRPortal = true;
+                //Si l'incident vient du portail
+                AreNewIRPortal = true;
             } else {
-                areNewIR = true;
+                //Si l'incident possède une autre source
+                AreNewIR = true;
             }
         }
     });
@@ -57,87 +65,93 @@ function checkNewIR() {
 
 function checkNewSR() {
     $("#SRUnassignedBody > tr").each(function () {
-        var SRDate = $(this).data("timestamp");        
-        
+        var SRDate = $(this).data("timestamp");
+
         var Now = new Date();
         var NowUTC = Math.floor(Date.UTC(Now.getFullYear(), Now.getMonth(), Now.getDate(), Now.getHours(), Now.getMinutes(), Now.getSeconds(), Now.getMilliseconds()) / 1000);
+
+        //var SRID = $(this).children().eq(0).html();
+        //console.log("SRID : " + SRID + ", SRDate : " + SRDate + ", NowUTC : " + NowUTC + ", diff : " + (NowUTC - SRDate));
+
+        var LatestUpdate = $("#latest-update").data('timestamp');
+        var DiffCltSrv = (NowUTC - LatestUpdate);
         
-        var SRID = $(this).children().eq(0).html();
-        
-        console.log("SRID : " + SRID + ", SRDate : " + SRDate + ", NowUTC : " + NowUTC + ", diff : " + (NowUTC - SRDate));
-        
+        //Prise en compte du décalage entre le client et le serveur
+        if (DiffCltSrv < 60) {
+            //Si moins de 60 secondes de décalage client-serveur on soustrait la différence de l'heure atuelle
+            NowUTC -= DiffCltSrv;
+        }
+
         if ((NowUTC - SRDate) < 60) {
-            areNewSR = true;
+            //Si la différence de temps entre la date de création effective de la SR et l'heure actuelle est moins de 60
+            AreNewSR = true;
         }
     });
 }
 
-function initAllAudio() {
+function InitAllAudio() {
 
-    numberUnassignedIR = $("#IRUnassignedBody > tr").length;
-    numberUnassignedSR = $("#SRUnassignedBody > tr").length;
-    numberViolation = $(".IncidentViolation").length;
-    numberWarning = $(".IncidentWarning").length;
+    //Récup du nombre de IR, SR non assignés et IR en avertissement / violation
+    IRUnassignedCount = $("#IRUnassignedBody > tr").length;
+    SRUnassignedCount = $("#SRUnassignedBody > tr").length;
+    IRViolationCount = $(".IncidentViolation").length;
+    IRWarningCount = $(".IncidentWarning").length;
 
+    //On lance l'initialisation des audios
     onAudioEnded("INIT");
 }
 
 function playSound(audio) {
     if (audio.id === "IR-Violation") {
-        if (numberViolation > 0) {
+        if (IRViolationCount > 0) {
             audio.play();
             console.log("IR-Violation played");
         } else {
             onAudioEnded(audio.id);
             console.log("IR-Violation skiped");
         }
-        console.log("IR-Violation done");
     } else if (audio.id === "IR-Warning") {
-        if (numberWarning > 0) {
+        if (IRWarningCount > 0) {
             audio.play();
             console.log("IR-Warning played");
         } else {
             onAudioEnded(audio.id);
             console.log("IR-Warning skiped");
         }
-        console.log("IR-Warning done");
     } else if (audio.id === "New-IR") {
         checkNewIR();
-        if (areNewIR) {
+        if (AreNewIR) {
             audio.play();
             console.log("New-IR played");
         } else {
             onAudioEnded(audio.id);
             console.log("New-IR skiped");
         }
-        console.log("New-IR done");
     } else if (audio.id === "New-IR-Portal") {
         checkNewIR();
-        if (areNewIRPortal) {
+        if (AreNewIRPortal) {
             audio.play();
             console.log("New-IR-Portal played");
         } else {
             onAudioEnded(audio.id);
             console.log("New-IR-Portal skiped");
         }
-        console.log("New-IR-Portal done");
     } else if (audio.id === "New-SR-Portal") {
         checkNewSR();
-        if (areNewSR) {
+        if (AreNewSR) {
             audio.play();
             console.log("New-SR-Portal played");
         } else {
             onAudioEnded(audio.id);
             console.log("New-SR-Portal skiped");
         }
-        console.log("New-SR-Portal done");
     } else if (audio.id === "IR-Unassigned") {
-        if (numberUnassignedIR >= 1 && numberUnassignedIR <= 5) {
-            $("#IR-Unassigned-src")[0].src = "Sounds/IR-Unassigned-" + numberUnassignedIR + ".wav";
+        if (IRUnassignedCount >= 1 && IRUnassignedCount <= 5) {
+            $("#IR-Unassigned-src")[0].src = "Sounds/IR-Unassigned-" + IRUnassignedCount + ".wav";
             audio.load();
             audio.play();
             console.log("IR-Unassigned 1-5 played");
-        } else if (numberUnassignedIR > 5) {
+        } else if (IRUnassignedCount > 5) {
             $("#IR-Unassigned-src")[0].src = "Sounds/IR-Unassigned-More.wav";
             audio.load();
             audio.play();
@@ -146,14 +160,13 @@ function playSound(audio) {
             onAudioEnded(audio.id);
             console.log("IR-Unassigned skiped");
         }
-        console.log("IR-Unassigned done");
     } else if (audio.id === "SR-Unassigned") {
-        if (numberUnassignedSR >= 1 && numberUnassignedSR <= 5) {
-            $("#SR-Unassigned-src")[0].src = "Sounds/SR-Unassigned-" + numberUnassignedSR + ".wav";
+        if (SRUnassignedCount >= 1 && SRUnassignedCount <= 5) {
+            $("#SR-Unassigned-src")[0].src = "Sounds/SR-Unassigned-" + SRUnassignedCount + ".wav";
             audio.load();
             audio.play();
             console.log("SR-Unassigned 1-5 played");
-        } else if (numberUnassignedSR > 5) {
+        } else if (SRUnassignedCount > 5) {
             $("#SR-Unassigned-src")[0].src = "Sounds/SR-Unassigned-More.wav";
             audio.load();
             audio.play();
@@ -162,7 +175,6 @@ function playSound(audio) {
             onAudioEnded(audio.id);
             console.log("SR-Unassigned skiped");
         }
-        console.log("SR-Unassigned done");
     }
 }
 
@@ -196,17 +208,3 @@ function onAudioEnded(audio) {
             alert("unknown sound : " + audio.id);
     }
 }
-/*
- IRUnassigned.volume = 0.1;
- SRUnassigned.volume = 0.1;
- 
- if (numberUnassignedIR >= 1 && numberUnassignedIR <= 5) {
- $("#IR-Unassigned-src")[0].src = "Sounds/IR-Unassigned-" + numberUnassignedIR + ".wav";
- IRUnassigned.load();
- //IRUnassignedSound.play();
- } else if (numberUnassignedIR > 5) {
- $("#IR-Unassigned-src")[0].src = "Sounds/IR-Unassigned-More.wav";
- IRUnassigned.load();
- //IRUnassignedSound.play();
- }
- */

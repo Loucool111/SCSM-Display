@@ -1,47 +1,50 @@
+//Quand le document est prêt
 $(document).ready(function () {
-    animate_tables();
-    initAllAudio();
+    //Init du scroll auto des tableaux
+    InitAutoscroll();
+    //Init des sons
+    InitAllAudio();
 });
 
-function animate_tables() {
+function InitAutoscroll() {
 
-    var table_animate_1 = $("#table-autoscroll-1");
+    var Table1 = $("#table-autoscroll-1");
 
-    function anim1() {
-        var st = table_animate_1.scrollTop();
-        var sb = table_animate_1.prop("scrollHeight") - table_animate_1.innerHeight();
-        table_animate_1.animate({scrollTop: st < sb / 2 ? sb : 0}, 10000, anim1);
+    function InitAutoscrollTable1() {
+        var st = Table1.scrollTop();
+        var sb = Table1.prop("scrollHeight") - Table1.innerHeight();
+        Table1.animate({scrollTop: st < sb / 2 ? sb : 0}, 10000, InitAutoscrollTable1);
     }
 
-    anim1();
+    InitAutoscrollTable1();
 
-    var table_animate_2 = $("#table-autoscroll-2");
+    var Table2 = $("#table-autoscroll-2");
 
-    function anim2() {
-        var st = table_animate_2.scrollTop();
-        var sb = table_animate_2.prop("scrollHeight") - table_animate_2.innerHeight();
-        table_animate_2.animate({scrollTop: st < sb / 2 ? sb : 0}, 10000, anim2);
+    function InitAutoscrollTable2() {
+        var st = Table2.scrollTop();
+        var sb = Table2.prop("scrollHeight") - Table2.innerHeight();
+        Table2.animate({scrollTop: st < sb / 2 ? sb : 0}, 10000, InitAutoscrollTable2);
     }
 
-    anim2();
+    InitAutoscrollTable2();
 
-    var table_animate_3 = $("#table-autoscroll-3");
+    var Table3 = $("#table-autoscroll-3");
 
-    function anim3() {
-        var st = table_animate_3.scrollTop();
-        var sb = table_animate_3.prop("scrollHeight") - table_animate_3.innerHeight();
-        table_animate_3.animate({scrollTop: st < sb / 2 ? sb : 0}, 10000, anim3);
+    function InitAutoscrollTable3() {
+        var st = Table3.scrollTop();
+        var sb = Table3.prop("scrollHeight") - Table3.innerHeight();
+        Table3.animate({scrollTop: st < sb / 2 ? sb : 0}, 10000, InitAutoscrollTable3);
     }
 
-    anim3();
+    InitAutoscrollTable3();
 
-    var table_animate_4 = $("#table-autoscroll-4");
+    var Table4 = $("#table-autoscroll-4");
 
-    function anim4() {
-        var st = table_animate_4.scrollTop();
-        var sb = table_animate_4.prop("scrollHeight") - table_animate_4.innerHeight();
-        table_animate_4.animate({scrollTop: st < sb / 2 ? sb : 0}, 10000, anim4);
+    function InitAutoscrollTable4() {
+        var st = Table4.scrollTop();
+        var sb = Table4.prop("scrollHeight") - Table4.innerHeight();
+        Table4.animate({scrollTop: st < sb / 2 ? sb : 0}, 10000, InitAutoscrollTable4);
     }
 
-    anim4();
+    InitAutoscrollTable4();
 }

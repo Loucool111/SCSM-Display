@@ -1,8 +1,4 @@
 <?php
-/*
- * TODO:
- * - clean code
- */
 
 //debug
 error_reporting(-1);
@@ -15,6 +11,7 @@ fclose($config_file);
 
 $config = json_decode($config_content, true);
 
+//Définition de la timezone par défaut
 date_default_timezone_set('Europe/Zurich');
 
 // CONSTANTES
