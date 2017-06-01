@@ -1,8 +1,8 @@
-#
-# Script de genération de fichier audio pour SCSM
-# Crée par Berret Luca (LUB)
-# Dernière modification le 28.03.2017
-#
+<#
+ Script de genération de fichier audio pour SCSM
+ Crée par Berret Luca (LUB)
+ Dernière modification le 28.03.2017
+#>
 Add-Type -AssemblyName System.Speech
 $speak = New-Object System.Speech.Synthesis.SpeechSynthesizer
 

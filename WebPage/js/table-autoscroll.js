@@ -4,6 +4,10 @@ $(document).ready(function () {
     InitAutoscroll();
     //Init des sons
     InitAllAudio();
+    //Auto refresh 60 secondes
+    setTimeout(function () {
+        window.location.reload(1);
+    }, 60000);
 });
 
 function InitAutoscroll() {
@@ -39,7 +43,7 @@ function InitAutoscroll() {
     InitAutoscrollTable3();
 
     var Table4 = $("#table-autoscroll-4");
-    
+
     function InitAutoscrollTable4() {
         var st = Table4.scrollTop();
         var sb = Table4.prop("scrollHeight") - Table4.innerHeight();

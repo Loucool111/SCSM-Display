@@ -141,6 +141,10 @@ $latest_update_table = explode('=', $latest_update_text);
 $latest_update_timestamp = $latest_update_table[0];
 $latest_update_date = $latest_update_table[1];
 fclose($update_file);
+
+header("Cache-Control: no-cache, must-revalidate"); // HTTP/1.1
+header("Expires: Sat, 26 Jul 1997 05:00:00 GMT"); // Date dans le passé
+
 ?>
 <!DOCTYPE html>
 <html>
@@ -149,7 +153,7 @@ fclose($update_file);
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
-        <meta http-equiv="refresh" content="60" >
+        <!--<meta http-equiv="refresh" content="60" >-->
 
         <title>SCSM Display page</title>
 
@@ -165,7 +169,11 @@ fclose($update_file);
             <a class="navbar-brand" href="#"><i class="fa fa-windows"></i> SCSM Display</a>
             <div class="collapse navbar-collapse" id="navbarText">
                 <ul class="navbar-nav mr-auto"></ul>
-                <span class="navbar-text">Dernière MàJ des données : <span id="latest-update" data-timestamp="<?= $latest_update_timestamp; ?>"><?= $latest_update_date; ?></span></span>
+                <span class="navbar-text">Dernière MàJ des données : 
+                    <span id="latest-update" data-timestamp="<?= $latest_update_timestamp; ?>">
+                        <?= $latest_update_date; ?>
+                    </span>
+                </span>
             </div>
         </nav>
         <div class="container-fluid" style="height: 92%;">
@@ -221,7 +229,7 @@ fclose($update_file);
                 <div class="w-100"></div>
                 <div class="col half-col">
                     <div class="card card-outline-info custom-card">
-                        <h4 class="card-header">Demandes de services non attribués en cours créés via le portail.</h4>
+                        <h4 class="card-header">Demandes de services non attribuées en cours créés via le portail.</h4>
                         <div class="card-block table-animate" id="table-autoscroll-3"> 
                             <table class="table table-striped table-sm">
                                 <thead>
@@ -241,7 +249,7 @@ fclose($update_file);
                 </div>
                 <div class="col half-col">
                     <div class="card card-outline-info custom-card">
-                        <h4 class="card-header">Demandes de services attribués en cours.</h4>
+                        <h4 class="card-header">Demandes de services attribuées en cours.</h4>
                         <div class="card-block table-animate" id="table-autoscroll-4">
                             <table class="table table-striped table-sm">
                                 <thead>
