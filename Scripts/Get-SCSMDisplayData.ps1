@@ -6,11 +6,11 @@
 
 #Récupération du chemin où le script est exéctué.
 $ScriptPath = Split-Path -Parent $PSScriptRoot
-$Config = Get-Content -Path $ScriptPath\SCSM-Config.json | Out-String | ConvertFrom-Json    #Récupération des données de config depuis le fichier .json
+#Récupération des données de config depuis le fichier .json
+$Config = Get-Content -Path $ScriptPath\SCSM-Config.json | Out-String | ConvertFrom-Json
 
 #Importation du module SMLetls si il n'est pas déja chargé
 if (!(Get-Module -Name SMLets)) {
-    #Import-Module -Name $Config.smlets_path -Force
     Import-Module -Name SMLets
     Write-Host "Module imported"
 } else {
@@ -26,11 +26,8 @@ $LOGFILEPATH = $OUTPUT_PATH + $Config.log_file
 $IR_FILE = $OUTPUT_PATH + $Config.ir_csv_file
 $SR_FILE = $OUTPUT_PATH + $Config.sr_csv_file
 
+#Cette variable permet de forcer des propriétés par défaut sur certaines commandes
 $PSDefaultParameterValues = @{ "Get-SCSM*:ComputerName" = $SERVER }
-
-#Variables Globales : Etat des SR
-$SRStatusNew = Get-SCSMEnumeration -Name "ServiceRequestStatusEnum.New"
-$SRStatusInProgress = Get-SCSMEnumeration -Name "ServiceRequestStatusEnum.InProgress"
 
 #Récupération de toutes les données BRUT et des classes qui permettront de lier les données ensembles.
 try {
@@ -41,13 +38,14 @@ try {
     $AssignedUserRelClass = Get-SCSMRelationshipClass System.WorkItemAssignedToUser$         #Classe de relation : attribué à
     $SLARelClass = Get-SCSMRelationshipClass System.WorkItemHasSLAInstanceInformation$       #Classe de relation : SLA
 
-    $IRStatusEnumActive = Get-SCSMEnumeration -Name IncidentStatusEnum.Active                #Statis d'un IR : "Actif"
-    $SRStatusEnumInProgress = Get-SCSMEnumeration -Name ServiceRequestStatusEnum.InProgress  #Status d'une SR : "En cours"
+    $IRStatusActive = Get-SCSMEnumeration -Name IncidentStatusEnum.Active                    #Status d'un IR : "Actif"
+	$SRStatusInProgress = Get-SCSMEnumeration -Name ServiceRequestStatusEnum.InProgress      #Status d'une SR : "En cours"
+	$SRStatusNew = Get-SCSMEnumeration -Name ServiceRequestStatusEnum.New                    #Status d'une SR : "Nouveau"
 
-	#Récuperation de tous les IR BRUTS qui sont actifs
-    $AllIncidents = Get-SCSMObject -Class $IRClass | Where-Object { $_.Status.Ordinal -eq $IRStatusEnumActive[0].Ordinal}
+	#Récuperation de tous les IR qui sont actifs
+    $AllIncidents = Get-SCSMObject -Class $IRClass | Where-Object { $_.Status.Ordinal -eq $IRStatusActive[0].Ordinal}
 	#Récuperation de toutes les SR qui sont en cours
-    $AllServiceRequests = Get-SCSMObject -Class $SRClass | Where-Object { $_.Status.Ordinal -eq $SRStatusEnumInProgress[0].Ordinal }
+    $AllServiceRequests = Get-SCSMObject -Class $SRClass | Where-Object { $_.Status.Ordinal -eq $SRStatusInProgress[0].Ordinal }
 } catch [Exception] {
 	#En cas d'erreur -> écrire l'erreur dans le log et quitter le script pour éviter les dégats
     Clear-Content -Path $LOGFILEPATH
@@ -63,7 +61,7 @@ try {
 #Fonction qui permet de filtrer les données pour les SR
 Function Filter-SRData
 {
-    Param([Object[]]$Collection) #En param -> tableau de toutes les SR BRUT.
+    Param([Object[]]$Collection) #En param -> tableau de toutes les SR brut.
     Process
     {
 		#Création du tableau de sortie
@@ -202,19 +200,27 @@ $UTF8NoBomEncoding = New-Object -TypeName System.Text.UTF8Encoding -ArgumentList
 #Exportation des IR en CSV (Encodage UTF-8 sans BOM)
 $FilteredIRCSV = $FilteredIR | ConvertTo-Csv -Delimiter ";" -NoTypeInformation
 
-#Pour éviter les erreurs, on export uniquement si le tableau n'est pas vide
+#Si le tableau est vide, il faut quand même écrire le fichier alors on exporte String.Empty
 if ($FilteredIRCSV) {
     [System.IO.File]::WriteAllLines($IR_FILE, $FilteredIRCSV, $UTF8NoBomEncoding)
+} else {
+    Clear-Content -Path $IR_FILE
 }
+
+#Message de succès pour l'utilisateur
 Write-Host "Requête, tri et export des IR terminé dans erreurs."
 
 #Exportation des SR en CSV (Encodage UTF-8 sans BOM)
 $FilteredSRCSV = $FilteredSR | ConvertTo-Csv -Delimiter ";" -NoTypeInformation
 
-#Pour éviter les erreurs, on export uniquement si le tableau n'est pas vide
+#Si le tableau est vide, on vide le fichier
 if ($FilteredSRCSV) {
-    [System.IO.File]::WriteAllLines($SR_FILE, $FilteredSRCSV, $UTF8NoBomEncoding)    
+    [System.IO.File]::WriteAllLines($SR_FILE, $FilteredSRCSV, $UTF8NoBomEncoding)
+} else {
+    Clear-Content -Path $SR_FILE
 }
+
+#Message de succès pour l'utilisateur
 Write-Host "Requête, tri et export des SR terminé dans erreurs."
 
 #Création (si existe pas) et ajout de la DateTime::Now dans le fichier log

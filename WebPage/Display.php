@@ -1,5 +1,4 @@
 <?php
-
 //debug
 error_reporting(-1);
 
