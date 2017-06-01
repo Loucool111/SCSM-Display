@@ -1,7 +1,7 @@
 ﻿<#
   Script de récupération de données pour SCSM
   Crée par Berret Luca (LUB)
-  Dernière modification le 29.05.2017
+  Dernière modification le 01.06.2017
 #>
 
 #Récupération du chemin où le script est exéctué.
@@ -67,7 +67,7 @@ Function Filter-SRData
 		#Création du tableau de sortie
         $OutputSR = @()
 		
-		#Boucle à travers toutes les SR BRUTES
+		#Boucle à travers toutes les SR bruts
         foreach ($Item in $Collection)
         {
 			#Création de l'object qui sera inséré dans le tableau
@@ -85,13 +85,16 @@ Function Filter-SRData
 
             #Pour la date de création, il faut la convertir en TimeZone locale puis, en format UNIX
             $CreatedDateTimestamp = [Math]::Floor([double]::Parse((Get-Date($Item.CreatedDate) -UFormat "%s")))
-            $CurrentSR | Add-Member -Type NoteProperty -Name CreatedDate -Value $CreatedDateTimestamp
+            $CurrentSR | Add-Member -Type NoteProperty -Name CreatedDate -Value $CreatedDateTimestamp              #Date de création
 
+            #Récupération de l'historique
             $History = Get-SCSMObjectHistory -Object $Item
+            #Réupération de la date de modification de l'élément de l'historique changement du statut de Nouveau à En cours
             $EffectiveCreatedDate = ($History.History | Where-Object { ($_.Changes.OldValue.Value -eq $SRStatusNew) -and ($_.Changes.NewValue.Value -eq $SRStatusInProgress) }).LastModified
+            #Transformation en temps UNIX
             $EffectiveCreatedDateTimestamp = [Math]::Floor([double]::Parse((Get-Date($EffectiveCreatedDate) -UFormat "%s")))
 
-            $CurrentSR | Add-Member -Type NoteProperty -Name EffectiveCreatedDate -Value $EffectiveCreatedDateTimestamp
+            $CurrentSR | Add-Member -Type NoteProperty -Name EffectiveCreatedDate -Value $EffectiveCreatedDateTimestamp #Date de création effective
 
 			#Ajoute de l'objet dans le tableau
             $OutputSR += $CurrentSR
@@ -107,6 +110,7 @@ Function Filter-IRData
 	Param ([Object[]]$Collection) #En param -> tableau de tout les IR BRUT.
 	Process
 	{
+        #Création du tableau de sortie
 		$OutputIR = @()
 		
 		#Pour chaque incident -> Récupération des données et sortie dans un tableau.
