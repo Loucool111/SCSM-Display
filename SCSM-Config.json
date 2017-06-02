@@ -8,5 +8,7 @@
 
 	"ir_csv_file": "open_IR.csv",
 	"sr_csv_file": "open_SR.csv",
-	"log_file": "latest.log"
+	"log_file": "latest.log",
+	
+	"refresh_time": 60
 }

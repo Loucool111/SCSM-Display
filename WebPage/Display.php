@@ -37,6 +37,7 @@ $HTML_IR_Unassigned_Table = "";
 $HTML_IR_SLA_Table = "";
 $HTML_SR_Unassigned_Table = "";
 $HTML_SR_Assigned_Table = "";
+$HTML_Default_refresh_time = $config['refresh_time'];
 
 //Fonction qui convertit les dates unix en dates normales et qui change et timezone locale
 function convertTime($timestamp) {
@@ -153,8 +154,6 @@ header("Expires: Sat, 26 Jul 1997 05:00:00 GMT"); // Date dans le passé
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
-        <!--<meta http-equiv="refresh" content="60" >-->
-
         <title>SCSM Display page</title>
 
         <!-- Bootstrap V.4 -->
@@ -168,12 +167,14 @@ header("Expires: Sat, 26 Jul 1997 05:00:00 GMT"); // Date dans le passé
         <nav class="navbar navbar-toggleable-md navbar-inverse bg-inverse">
             <a class="navbar-brand" href="#"><i class="fa fa-windows"></i> SCSM Display</a>
             <div class="collapse navbar-collapse" id="navbarText">
+                <span class="navbar-text"><i class="fa fa-clock-o" id="icon-navbar"></i> Prochaine MàJ de la page dans : <span id="refresh-time"><?= $HTML_Default_refresh_time ?></span>s</span>
                 <ul class="navbar-nav mr-auto"></ul>
                 <span class="navbar-text">Dernière MàJ des données : 
                     <span id="latest-update" data-timestamp="<?= $latest_update_timestamp; ?>">
                         <?= $latest_update_date; ?>
                     </span>
                 </span>
+                
             </div>
         </nav>
         <div class="container-fluid" style="height: 92%;">

@@ -8,6 +8,12 @@ $(document).ready(function () {
     setTimeout(function () {
         window.location.reload(1);
     }, 60000);
+    
+    var time = $('#refresh-time').html();
+    setInterval(function (){
+        time--;
+        $('#refresh-time').html(time);
+    }, 1000);
 });
 
 function InitAutoscroll() {

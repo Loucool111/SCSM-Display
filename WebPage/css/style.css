@@ -40,3 +40,7 @@ html,body {
     margin-top: 20px;
     height: 90%;
 }
+
+#icon-navbar {
+    margin-left: 15px;
+}
