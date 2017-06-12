@@ -212,7 +212,7 @@ if ($FilteredIRCSV) {
 }
 
 #Message de succès pour l'utilisateur
-Write-Host "Requête, tri et export des IR terminé dans erreurs."
+Write-Host "Requête, tri et export des IR terminé sans erreurs."
 
 #Exportation des SR en CSV (Encodage UTF-8 sans BOM)
 $FilteredSRCSV = $FilteredSR | ConvertTo-Csv -Delimiter ";" -NoTypeInformation
@@ -225,7 +225,7 @@ if ($FilteredSRCSV) {
 }
 
 #Message de succès pour l'utilisateur
-Write-Host "Requête, tri et export des SR terminé dans erreurs."
+Write-Host "Requête, tri et export des SR terminé sans erreurs."
 
 #Création (si existe pas) et ajout de la DateTime::Now dans le fichier log
 if (Test-Path -Path $LOGFILEPATH)
