@@ -17,19 +17,21 @@ date_default_timezone_set('Europe/Zurich');
 
 $SCRIPTS_PATH = $config["script_output"];
 
-$OPENED_IR_FILE = $SCRIPTS_PATH . $config["ir_csv_file"];
-$OPENED_SR_FILE = $SCRIPTS_PATH . $config["sr_csv_file"];
+$IR_FILE_PATH = $SCRIPTS_PATH . $config["ir_csv_file"];
+$SR_FILE_PATH = $SCRIPTS_PATH . $config["sr_csv_file"];
 
-$LATEST_UPDATE_FILE = $SCRIPTS_PATH . $config["log_file"];
+$LATEST_UPDATE_FILE_PATH = $SCRIPTS_PATH . $config["log_file"];
 
 $SCSM_PRIORITY = "Priority";
 $SCSM_STATUS_ACTIVE = "SLAInstance.Status.Active";
 $SCSM_STATUS_WARNING = "SLAInstance.Status.Warning";
 $SCSM_STATUS_VIOLATION = "SLAInstance.Status.Breached";
-$SCSM_STATUS_UNASSIGNED = "Non attribué";
-$SCSM_STATUS_SOURCE_PORTAL = "ServiceRequestSourceEnum.Portal";
+$SCSM_UNASSIGNED = "Non attribué";
+$SCSM_SOURCE_PORTAL = "ServiceRequestSourceEnum.Portal";
 
-$SCSM_PRIORITY_TRANSLATIONS = array("ServiceRequestPriorityEnum.Low" => "Faible", "ServiceRequestPriorityEnum.Medium" => "Moyenne", "ServiceRequestPriorityEnum.High" => "Élevée");
+$SCSM_PRIORITY_TRANSLATIONS = array("ServiceRequestPriorityEnum.Low" => "Faible",
+                                    "ServiceRequestPriorityEnum.Medium" => "Moyenne",
+                                    "ServiceRequestPriorityEnum.High" => "Élevée");
 
 // VARIABLES GLOBALES
 
@@ -52,13 +54,13 @@ function convertTime($timestamp) {
 }
 
 //Création des tables pour les incidents
-if (($handle = fopen($OPENED_IR_FILE, "r")) !== FALSE) {
+if (($handle = fopen($IR_FILE_PATH, "r")) !== FALSE) {
     while (($data = fgetcsv($handle, 0, ";")) !== FALSE) {
         if ($data[2] != $SCSM_PRIORITY) {  //way to ignore the header
             if ($data[7] == $SCSM_STATUS_WARNING) {
                 $HTML_IR_SLA_Table .= "<tr class=\"alert-warning\" data-source=\"$data[8]\" data-effectivetimestamp=\"$data[9]\">";
                 foreach ($data as $key => $value) {
-                    if ($value == $SCSM_STATUS_UNASSIGNED) {
+                    if ($value == $SCSM_UNASSIGNED) {
                         $HTML_IR_SLA_Table .= "<td class=\"IncidentUnassigned\">$value</td>";
                     } elseif ($value == $SCSM_STATUS_WARNING) {
                         $HTML_IR_SLA_Table .= '<td class="IncidentWarning"><i class="fa fa-exclamation-triangle fa-2x fa-align-center" aria-hidden="true"></i></td>';
@@ -72,7 +74,7 @@ if (($handle = fopen($OPENED_IR_FILE, "r")) !== FALSE) {
             } elseif ($data[7] == $SCSM_STATUS_VIOLATION) {
                 $HTML_IR_SLA_Table .= "<tr class=\"alert-danger\" data-source=\"$data[8]\" data-effectivetimestamp=\"$data[9]\">";
                 foreach ($data as $key => $value) {
-                    if ($value == $SCSM_STATUS_UNASSIGNED) {
+                    if ($value == $SCSM_UNASSIGNED) {
                         $HTML_IR_SLA_Table .= "<td class=\"IncidentUnassigned\">$value</td>";
                     } elseif ($value == $SCSM_STATUS_VIOLATION) {
                         $HTML_IR_SLA_Table .= '<td class="IncidentViolation"><i class="fa fa-exclamation-circle fa-2x fa-align-center" aria-hidden="true"></i></td>';
@@ -83,7 +85,7 @@ if (($handle = fopen($OPENED_IR_FILE, "r")) !== FALSE) {
                     }
                 }
                 $HTML_IR_SLA_Table .= '</tr>';
-            } elseif ($data[3] == $SCSM_STATUS_UNASSIGNED) {
+            } elseif ($data[3] == $SCSM_UNASSIGNED) {
                 $HTML_IR_Unassigned_Table .= "<tr data-source=\"$data[8]\" data-effectivetimestamp=\"$data[9]\">";
                 foreach ($data as $key => $value) {
                     if ($value == $SCSM_STATUS_ACTIVE) {
@@ -115,11 +117,11 @@ function SortSRByAssignation($arrayToFill, $data) {
 }
 
 //Création des tables pour les SR
-if (($handle = fopen($OPENED_SR_FILE, "r")) !== FALSE) {
+if (($handle = fopen($SR_FILE_PATH, "r")) !== FALSE) {
     while (($data = fgetcsv($handle, 0, ";")) !== FALSE) {
         if ($data[3] != $SCSM_PRIORITY) {
             if ($data[2] == null) {
-                if ($data[4] == $SCSM_STATUS_SOURCE_PORTAL) {
+                if ($data[4] == $SCSM_SOURCE_PORTAL) {
                     $HTML_SR_Unassigned_Table = SortSRByAssignation($HTML_SR_Unassigned_Table, $data);
                 }
             } else {
@@ -136,8 +138,8 @@ foreach ($SCSM_PRIORITY_TRANSLATIONS as $key => $value) {
 }
 
 //Affichage de la "Last Update"
-$update_file = fopen($LATEST_UPDATE_FILE, "r") or die("Unable to open " . $config["log_file"] . " file!");
-$latest_update_text = fread($update_file, filesize($LATEST_UPDATE_FILE));
+$update_file = fopen($LATEST_UPDATE_FILE_PATH, "r") or die("Impossible d'ouvrir le fichier " . $LATEST_UPDATE_FILE_PATH . " ! Merci de vérifier que le fichier existe.");
+$latest_update_text = fread($update_file, filesize($LATEST_UPDATE_FILE_PATH));
 $latest_update_table = explode('=', $latest_update_text);
 $latest_update_timestamp = $latest_update_table[0];
 $latest_update_date = $latest_update_table[1];
@@ -174,7 +176,6 @@ header("Expires: Sat, 26 Jul 1997 05:00:00 GMT"); // Date dans le passé
                         <?= $latest_update_date; ?>
                     </span>
                 </span>
-                
             </div>
         </nav>
         <div class="container-fluid" style="height: 92%;">
@@ -277,8 +278,12 @@ header("Expires: Sat, 26 Jul 1997 05:00:00 GMT"); // Date dans le passé
         <audio id="New-SR-Portal" onended="onAudioEnded('New-SR-Portal');"><source src="Sounds/New-SR-Portal.wav" type="audio/wav"></audio>
         <audio id="IR-Violation" onended="onAudioEnded('IR-Violation');"><source src="Sounds/IR-Violation.wav" type="audio/wav"></audio>
         <audio id="IR-Warning" onended="onAudioEnded('IR-Warning');"><source src="Sounds/IR-Warning.wav" type="audio/wav"></audio>
-        <audio id="IR-Unassigned" onended="onAudioEnded('IR-Unassigned');"><source id="IR-Unassigned-src" src="Sounds/IR-Unassigned-More.wav" type="audio/wav"></audio>
-        <audio id="SR-Unassigned" onended="onAudioEnded('SR-Unassigned');"><source id="SR-Unassigned-src" src="Sounds/SR-Unassigned-More.wav" type="audio/wav"></audio>
+        <audio id="IR-Unassigned" onended="onAudioEnded('IR-Unassigned');">
+            <source id="IR-Unassigned-src" src="Sounds/IR-Unassigned-More.wav" type="audio/wav">
+        </audio>
+        <audio id="SR-Unassigned" onended="onAudioEnded('SR-Unassigned');">
+            <source id="SR-Unassigned-src" src="Sounds/SR-Unassigned-More.wav" type="audio/wav">
+        </audio>
 
         <!-- Boostrap V.4 -->
         <script src="js/jquery-3.1.1.min.js"></script>

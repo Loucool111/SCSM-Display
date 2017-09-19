@@ -6,9 +6,9 @@
 
 	"script_output": "D:\\SCSM-Display\\Output\\",
 
-	"ir_csv_file": "open_IR.csv",
-	"sr_csv_file": "open_SR.csv",
-	"log_file": "latest.log",
+	"ir_csv_file": "IR_Exported.csv",
+	"sr_csv_file": "SR_Exported.csv",
+	"log_file": "Latest.log",
 	
 	"refresh_time": 60
 }

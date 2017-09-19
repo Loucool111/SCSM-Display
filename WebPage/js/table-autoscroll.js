@@ -1,18 +1,25 @@
-//Quand le document est prêt
+//Trigger à la fin du charhement de la page, quand le document est prêt
 $(document).ready(function () {
     //Init du scroll auto des tableaux
     InitAutoscroll();
+
     //Init des sons
     InitAllAudio();
+
     //Auto refresh 60 secondes
     setTimeout(function () {
         window.location.reload(1);
     }, 60000);
-    
+
+    //Récupération du refresh time par défaut
     var time = $('#refresh-time').html();
-    setInterval(function (){
-        time--;
-        $('#refresh-time').html(time);
+
+    //Chaque seconde le timer est décrémenté
+    setInterval(function () {
+        if (time > 0) {
+            time--;
+            $('#refresh-time').html(time);
+        }
     }, 1000);
 });
 

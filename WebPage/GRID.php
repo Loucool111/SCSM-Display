@@ -20,9 +20,10 @@
             <a class="navbar-brand" href="#"><i class="fa fa-windows"></i> GRID TEST</a>
             <div class="collapse navbar-collapse" id="navbarText">
                 <ul class="navbar-nav mr-auto"></ul>
-                <span class="navbar-text">awdwa</span>
+                <span class="navbar-text">test</span>
             </div>
         </nav>
+        
         <div class="container-fluid" style="margin-bottom: 30px; height: 92%;">
             <div class="row" style="height: 100%;">
                 <div class="col half-col">
