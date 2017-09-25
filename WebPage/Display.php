@@ -15,12 +15,13 @@ date_default_timezone_set('Europe/Zurich');
 
 // CONSTANTES
 
-$SCRIPTS_PATH = $config["script_output"];
+$CACHE_PATH = $config["CachePath"];
+$LOG_PATH = $config["LogPath"];
 
-$IR_FILE_PATH = $SCRIPTS_PATH . $config["ir_csv_file"];
-$SR_FILE_PATH = $SCRIPTS_PATH . $config["sr_csv_file"];
+$IR_FILE_PATH = $CACHE_PATH . $config["IncidentRequestCacheFile"];
+$SR_FILE_PATH = $CACHE_PATH . $config["ServiceRequestCacheFile"];
 
-$LATEST_UPDATE_FILE_PATH = $SCRIPTS_PATH . $config["log_file"];
+$LATEST_UPDATE_FILE_PATH = $LOG_PATH . $config["LogFile"];
 
 $SCSM_PRIORITY = "Priority";
 $SCSM_STATUS_ACTIVE = "SLAInstance.Status.Active";
@@ -39,7 +40,7 @@ $HTML_IR_Unassigned_Table = "";
 $HTML_IR_SLA_Table = "";
 $HTML_SR_Unassigned_Table = "";
 $HTML_SR_Assigned_Table = "";
-$HTML_Default_refresh_time = $config['refresh_time'];
+$HTML_Default_refresh_time = $config['DefaultRefreshInterval'];
 
 //Fonction qui convertit les dates unix en dates normales et qui change et timezone locale
 function convertTime($timestamp) {

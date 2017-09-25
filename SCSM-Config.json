@@ -1,14 +1,15 @@
 {
-	"servername": "s2mscsmlab.s2.rpn.ch",
+	"SCSMManagementServerFQDN": "s2mscsmlab.s2.rpn.ch",
 
-	"script_root": "D:\\SCSM-Display\\Scripts\\",
-	"webpage_root": "D:\\SCSM-Display\\WebPage\\",
+	"ScriptPath": "D:\\SCSM-Display\\Scripts\\",
+	"WebPagePath": "D:\\SCSM-Display\\WebPage\\",
 
-	"script_output": "D:\\SCSM-Display\\Output\\",
+	"CachePath": "D:\\SCSM-Display\\Cache\\",
+	"LogPath": "D:\\SCSM-Display\\Logs\\",
 
-	"ir_csv_file": "IR_Exported.csv",
-	"sr_csv_file": "SR_Exported.csv",
-	"log_file": "Latest.log",
+	"IncidentRequestCacheFile": "IncidentRequestCache.csv",
+	"ServiceRequestCacheFile": "ServiceRequestCache.csv",
+	"LogFile": "Latest.log",
 	
-	"refresh_time": 60
+	"DefaultRefreshInterval": 60
 }

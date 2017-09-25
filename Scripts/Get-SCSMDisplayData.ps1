@@ -1,67 +1,92 @@
 ﻿<#
   Script de récupération de données pour SCSM
   Crée par Berret Luca (LUB)
-  Dernière modification le 01.06.2017
+  Dernière modification le 25.09.2017
 #>
+
+function Log-Error
+{
+	[CmdletBinding()]
+	param (
+		[Parameter(Mandatory = $true)]
+		[string]
+        $Message
+	)
+	
+	Process
+	{
+		$TimeStamp = Get-Date -Format 'yyy.MM.dd HH:mm:ss'
+        $Line = "$TimeStamp -> $Message"
+        
+        $CurrentDate = Get-Date -Format yyy-MM-dd
+        $ErrorFileName = $LOGPATH + "Error-$CurrentDate.log"
+
+        if (!(Test-Path $ErrorFileName)) {
+            New-Item -ItemType File -Path $ErrorFileName -Value $Line | Out-Null
+        } else {
+            Add-Content -Path $ErrorFileName -Value (([Environment]::NewLine) + $Line)
+        }
+	}
+}
+
+#On clear les erreurs avant le script
+$Error.Clear()
 
 #Récupération du chemin où le script est exéctué.
 $ScriptPath = Split-Path -Parent $PSScriptRoot
+
 #Récupération des données de config depuis le fichier .json
 $Config = Get-Content -Path $ScriptPath\SCSM-Config.json | Out-String | ConvertFrom-Json
 
 #Importation du module SMLetls si il n'est pas déja chargé
 if (!(Get-Module -Name SMLets)) {
-    Import-Module -Name SMLets
+    Import-Module -Name SMLets -ErrorAction Stop
     Write-Host "Module imported"
 } else {
     Write-Host "Module already imported"
 }
 
 #Assignation des constantes depuis la config
-$SERVER = $Config.servername
+$SERVER = $Config.SCSMManagementServerFQDN
 
-$OUTPUT_PATH = $Config.script_output
-$LOGFILEPATH = $OUTPUT_PATH + $Config.log_file
+$CACHEPATH = $Config.CachePath
+$LOGPATH = $Config.LogPath
 
-$IR_FILE = $OUTPUT_PATH + $Config.ir_csv_file
-$SR_FILE = $OUTPUT_PATH + $Config.sr_csv_file
+$LOGFILEPATH = $LOGPATH + $Config.LogFile
+
+$IRCACHEFILE = $CACHEPATH + $Config.IncidentRequestCacheFile
+$SRCACHEFILE = $CACHEPATH + $Config.ServiceRequestCacheFile
 
 #Cette variable permet de forcer des propriétés par défaut sur certaines commandes
 $PSDefaultParameterValues = @{ "Get-SCSM*:ComputerName" = $SERVER }
 
 #Récupération de toutes les données BRUT et des classes qui permettront de lier les données ensembles.
-try {
-    $IRClass = Get-SCSMClass -Name "System.WorkItem.Incident$"                               #Classe des IR
-    $SRClass = Get-SCSMClass -Name "System.WorkItem.ServiceRequest$"                         #Classe des SR
-	
-    $AffectedUserRelClass = Get-SCSMRelationshipClass System.WorkItemAffectedUser$           #Classe de relation : utilisateur affecté
-    $AssignedUserRelClass = Get-SCSMRelationshipClass System.WorkItemAssignedToUser$         #Classe de relation : attribué à
-    $SLARelClass = Get-SCSMRelationshipClass System.WorkItemHasSLAInstanceInformation$       #Classe de relation : SLA
+$IRClass = Get-SCSMClass -Name 'System.WorkItem.Incident$'              #Classe des IR
+$SRClass = Get-SCSMClass -Name 'System.WorkItem.ServiceRequest$'        #Classe des SR
 
-    $IRStatusActive = Get-SCSMEnumeration -Name IncidentStatusEnum.Active                    #Status d'un IR : "Actif"
-	$SRStatusInProgress = Get-SCSMEnumeration -Name ServiceRequestStatusEnum.InProgress      #Status d'une SR : "En cours"
-	$SRStatusNew = Get-SCSMEnumeration -Name ServiceRequestStatusEnum.New                    #Status d'une SR : "Nouveau"
+$AffectedUserRelClass = Get-SCSMRelationshipClass -Name 'System.WorkItemAffectedUser$'     #Classe de relation : utilisateur affecté
+$AssignedUserRelClass = Get-SCSMRelationshipClass -Name 'System.WorkItemAssignedToUser$'   #Classe de relation : attribué à
+$SLARelClass = Get-SCSMRelationshipClass -Name 'System.WorkItemHasSLAInstanceInformation$' #Classe de relation : SLA
 
-	#Récuperation de tous les IR qui sont actifs
-    $AllIncidents = Get-SCSMObject -Class $IRClass | Where-Object { $_.Status.Ordinal -eq $IRStatusActive[0].Ordinal}
-	#Récuperation de toutes les SR qui sont en cours
-    $AllServiceRequests = Get-SCSMObject -Class $SRClass | Where-Object { $_.Status.Ordinal -eq $SRStatusInProgress[0].Ordinal }
-} catch [Exception] {
-	#En cas d'erreur -> écrire l'erreur dans le log et quitter le script pour éviter les dégats
-    Clear-Content -Path $LOGFILEPATH
-    Add-Content -Path $LOGFILEPATH -Value "Impossible de mettre à jour les données."
-    $CurrentDate = Get-Date -Format dd.MM.yyy-hh_mm_ss
-    $ErrorFileName = $OUTPUT_PATH + "errors\error-$CurrentDate.txt"
-    New-Item -ItemType File -Path $ErrorFileName -Value $_.Exception | Out-Null
-    Add-Content -Path $ErrorFileName -Value (([Environment]::NewLine) + "Config : $Config")
-    Write-Host "Erreur Fatale ! voir log $ErrorFileName"
-    exit
-}
+$IRStatusActive = Get-SCSMEnumeration -Name 'IncidentStatusEnum.Active'                    #Status d'un IR : "Actif"
+$SRStatusInProgress = Get-SCSMEnumeration -Name 'ServiceRequestStatusEnum.InProgress'      #Status d'une SR : "En cours"
+$SRStatusNew = Get-SCSMEnumeration -Name 'ServiceRequestStatusEnum.New'                    #Status d'une SR : "Nouveau"
+
+#Récuperation de tous les IR qui sont actifs
+$AllIncidents = Get-SCSMObject -Class $IRClass | Where-Object { $_.Status.Ordinal -eq $IRStatusActive[0].Ordinal}
+#Récuperation de toutes les SR qui sont en cours
+$AllServiceRequests = Get-SCSMObject -Class $SRClass | Where-Object { $_.Status.Ordinal -eq $SRStatusInProgress[0].Ordinal }
 
 #Fonction qui permet de filtrer les données pour les SR
 Function Filter-SRData
 {
-    Param([Object[]]$Collection) #En param -> tableau de toutes les SR brut.
+    [CmdletBinding()]
+    Param (
+        #En param -> tableau de toutes les SR brut.
+        [Parameter(Mandatory=$true)]
+        [Object[]]
+        $Collection
+    ) 
     Process
     {
 		#Création du tableau de sortie
@@ -107,7 +132,13 @@ Function Filter-SRData
 #Fonction qui permet de filtrer les données pour les IR
 Function Filter-IRData
 {
-	Param ([Object[]]$Collection) #En param -> tableau de tout les IR BRUT.
+    [CmdletBinding()]
+	Param (
+        #En param -> tableau de tout les IR BRUT.
+        [Parameter(Mandatory=$true)]
+        [Object[]]
+        $Collection
+    )
 	Process
 	{
         #Création du tableau de sortie
@@ -189,11 +220,15 @@ Function Filter-IRData
 	}
 }
 
-#Filtre des IR grâce à la fonction ci-dessus
-$FilteredIR = Filter-IRData -Collection $AllIncidents
+if ($AllIncidents -ne $null) {
+    #Filtre des IR grâce à la fonction ci-dessus
+    $FilteredIR = Filter-IRData -Collection $AllIncidents
+}
 
-#Filtre des SR grâce à la fonction ci-dessus
-$FilteredSR = Filter-SRData -Collection $AllServiceRequests
+if ($AllServiceRequests -ne $null) {
+    #Filtre des SR grâce à la fonction ci-dessus
+    $FilteredSR = Filter-SRData -Collection $AllServiceRequests
+}
 
 #Tri des incidents, par date de création descendante et si même date de création, par priorité ascendante
 $FilteredIR = $FilteredIR | Sort-Object @{Expression={$_.CreatedDate.Date};Descending=$true},@{Expression={$_.Priority};Ascending=$true}
@@ -206,9 +241,9 @@ $FilteredIRCSV = $FilteredIR | ConvertTo-Csv -Delimiter ";" -NoTypeInformation
 
 #Si le tableau est vide, il faut quand même écrire le fichier alors on exporte String.Empty
 if ($FilteredIRCSV) {
-    [System.IO.File]::WriteAllLines($IR_FILE, $FilteredIRCSV, $UTF8NoBomEncoding)
+    [System.IO.File]::WriteAllLines($IRCACHEFILE, $FilteredIRCSV, $UTF8NoBomEncoding)
 } else {
-    Clear-Content -Path $IR_FILE
+    Clear-Content -Path $IRCACHEFILE
 }
 
 #Message de succès pour l'utilisateur
@@ -219,9 +254,9 @@ $FilteredSRCSV = $FilteredSR | ConvertTo-Csv -Delimiter ";" -NoTypeInformation
 
 #Si le tableau est vide, on vide le fichier
 if ($FilteredSRCSV) {
-    [System.IO.File]::WriteAllLines($SR_FILE, $FilteredSRCSV, $UTF8NoBomEncoding)
+    [System.IO.File]::WriteAllLines($SRCACHEFILE, $FilteredSRCSV, $UTF8NoBomEncoding)
 } else {
-    Clear-Content -Path $SR_FILE
+    Clear-Content -Path $SRCACHEFILE
 }
 
 #Message de succès pour l'utilisateur
@@ -241,5 +276,10 @@ else
     Add-Content -Path $LOGFILEPATH -Value $Date
 }
 
-#Suppressions du module SMLets
+foreach ($Item in $Error) 
+{
+    Log-Error -Message $Item
+}
+
+#Suppression du module SMLets
 Remove-Module SMLets -Force -ErrorAction SilentlyContinue
