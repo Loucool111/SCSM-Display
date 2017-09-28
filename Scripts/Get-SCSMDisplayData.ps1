@@ -1,9 +1,10 @@
 ﻿<#
   Script de récupération de données pour SCSM
   Crée par Berret Luca (LUB)
-  Dernière modification le 25.09.2017
+  Dernière modification le 28.09.2017
 #>
 
+#Fonction qui écrit un log d'erreur
 function Log-Error
 {
 	[CmdletBinding()]
@@ -27,6 +28,24 @@ function Log-Error
             Add-Content -Path $ErrorFileName -Value (([Environment]::NewLine) + $Line)
         }
 	}
+}
+
+#Fonction qui change les datetime en unix time
+function Convert-ToUnixTimeSeconds
+{
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory=$true)]
+        [DateTime]
+        $Date
+    )
+
+    Process
+    {
+        $Result = [Math]::Floor([double]::Parse((Get-Date($Date) -UFormat "%s")))
+
+        Write-Output -InputObject $Result
+    }
 }
 
 #On clear les erreurs avant le script
@@ -109,7 +128,7 @@ Function Filter-SRData
             $CurrentSR | Add-Member -Type NoteProperty -Name Source -Value $Item.Source.Name                       #Source
 
             #Pour la date de création, il faut la convertir en TimeZone locale puis, en format UNIX
-            $CreatedDateTimestamp = [Math]::Floor([double]::Parse((Get-Date($Item.CreatedDate) -UFormat "%s")))
+            $CreatedDateTimestamp = Convert-ToUnixTimeSeconds -Date $Item.CreatedDate
             $CurrentSR | Add-Member -Type NoteProperty -Name CreatedDate -Value $CreatedDateTimestamp              #Date de création
 
             #Récupération de l'historique
@@ -117,7 +136,7 @@ Function Filter-SRData
             #Réupération de la date de modification de l'élément de l'historique changement du statut de Nouveau à En cours
             $EffectiveCreatedDate = ($History.History | Where-Object { ($_.Changes.OldValue.Value -eq $SRStatusNew) -and ($_.Changes.NewValue.Value -eq $SRStatusInProgress) }).LastModified
             #Transformation en temps UNIX
-            $EffectiveCreatedDateTimestamp = [Math]::Floor([double]::Parse((Get-Date($EffectiveCreatedDate) -UFormat "%s")))
+            $EffectiveCreatedDateTimestamp = Convert-ToUnixTimeSeconds -Date $EffectiveCreatedDate
 
             $CurrentSR | Add-Member -Type NoteProperty -Name EffectiveCreatedDate -Value $EffectiveCreatedDateTimestamp #Date de création effective
 
@@ -174,7 +193,7 @@ Function Filter-IRData
 			$CurrentIncident | Add-Member -Type NoteProperty -Name AffectedUser -Value $CurrentAffectedUser.DisplayName #Affected User
 			
 			#Pour la date de création, il faut la convertir en TimeZone locale puis, en temps UNIX
-			$CreatedDateTimestamp = [Math]::Floor([double]::Parse((Get-Date($Item.CreatedDate) -UFormat "%s")))
+			$CreatedDateTimestamp = Convert-ToUnixTimeSeconds -Date $Item.CreatedDate
 			$CurrentIncident | Add-Member -Type NoteProperty -Name CreatedDate -Value $CreatedDateTimestamp
 			
 			#Pour les SLA, si il y en a plusieurs, prendre celle qui est actuellement active.
@@ -197,7 +216,7 @@ Function Filter-IRData
 			
             #Quand les SLA n'ont pas étés appliqués, on n'exporte pas ces 2 propriétés.
             if ($ActiveSLA) {
-			    $ActiveSLATimestamp = [Math]::Floor([double]::Parse((Get-Date($ActiveSLA.TargetEndDate) -UFormat "%s")))
+			    $ActiveSLATimestamp = Convert-ToUnixTimeSeconds -Date $ActiveSLA.TargetEndDate
 			    $CurrentIncident | Add-Member -Type NoteProperty -Name SLAEndDate -Value $ActiveSLATimestamp #Date de fin prévue
 			    $CurrentIncident | Add-Member -Type NoteProperty -Name SLAStatus -Value $ActiveSLA.Status.Name #Status SLA
 			}
@@ -207,7 +226,7 @@ Function Filter-IRData
 			#Pour la notification sonore du nouvel incident -> il faut récuperer l'heure à laquelle le serveur à reçu les données.
 			$History = Get-SCSMObjectHistory -Object $Item
 			$EffectiveCreateDate = $History[0].History[0].LastModified
-			$EffectiveCreateTimestamp = [Math]::Floor([double]::Parse((Get-Date($EffectiveCreateDate) -UFormat "%s")))
+			$EffectiveCreateTimestamp = Convert-ToUnixTimeSeconds -Date $EffectiveCreateDate
 			
 			#Ajout de l'objet de la date de création effective dans le tableau.
 			$CurrentIncident | Add-Member -Type NoteProperty -Name EffectiveCreateDate -Value $EffectiveCreateTimestamp #Date de création effective
