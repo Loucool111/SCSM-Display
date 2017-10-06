@@ -1,0 +1,15 @@
+{
+	"SCSMManagementServerFQDN": "s2mscscm2mgmt.s2.rpn.ch",
+
+	"ScriptPath": "C:\\inetpub\\wwwroot\\SCSM-Display\\Scripts\\",
+	"WebPagePath": "C:\\inetpub\\wwwroot\\SCSM-Display\\WebPage\\",
+
+	"CachePath": "C:\\inetpub\\wwwroot\\SCSM-Display\\Cache\\",
+	"LogPath": "C:\\inetpub\\wwwroot\\SCSM-Display\\Logs\\",
+
+	"IncidentRequestCacheFile": "IncidentRequestCache.csv",
+	"ServiceRequestCacheFile": "ServiceRequestCache.csv",
+	"LogFile": "Latest.log",
+	
+	"DefaultRefreshInterval": 60
+}

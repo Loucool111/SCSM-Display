@@ -1,7 +1,7 @@
 ﻿<#
   Script de récupération de données pour SCSM
   Crée par Berret Luca (LUB)
-  Dernière modification le 28.09.2017
+  Dernière modification le 05.10.2017
 #>
 
 #Fonction qui écrit un log d'erreur
@@ -114,22 +114,11 @@ Function Filter-SRData
 		#Boucle à travers toutes les SR bruts
         foreach ($Item in $Collection)
         {
-			#Création de l'object qui sera inséré dans le tableau
-            $CurrentSR = New-Object System.Object
-			
 			#Récupération de l'utilisateur attribué
 			$CurrentAssignedUser = Get-SCSMRelatedObject -SMObject $Item -Relationship $AssignedUserRelClass -ErrorAction Stop
-			
-			#Récupération des données
-            $CurrentSR | Add-Member -Type NoteProperty -Name ID -Value $Item.Id                                    #ID
-            $CurrentSR | Add-Member -Type NoteProperty -Name Title -Value $Item.Title                              #Titre
-            $CurrentSR | Add-Member -Type NoteProperty -Name AssignedUser -Value $CurrentAssignedUser.DisplayName  #Utilisateur attribué
-            $CurrentSR | Add-Member -Type NoteProperty -Name Priority -Value $Item.Priority.Name                   #Priorité
-            $CurrentSR | Add-Member -Type NoteProperty -Name Source -Value $Item.Source.Name                       #Source
 
             #Pour la date de création, il faut la convertir en TimeZone locale puis, en format UNIX
             $CreatedDateTimestamp = Convert-ToUnixTimeSeconds -Date $Item.CreatedDate
-            $CurrentSR | Add-Member -Type NoteProperty -Name CreatedDate -Value $CreatedDateTimestamp              #Date de création
 
             #Récupération de l'historique
             $History = Get-SCSMObjectHistory -Object $Item
@@ -137,10 +126,22 @@ Function Filter-SRData
             $EffectiveCreatedDate = ($History.History | Where-Object { ($_.Changes.OldValue.Value -eq $SRStatusNew) -and ($_.Changes.NewValue.Value -eq $SRStatusInProgress) }).LastModified
             #Transformation en temps UNIX
             $EffectiveCreatedDateTimestamp = Convert-ToUnixTimeSeconds -Date $EffectiveCreatedDate
+            
+            #On ajoute toutes les propriétés dans une OrderedDictionary  
+            $SRProperties = [Ordered]@{
+                'ID' = $Item.Id;
+                'Title' = $Item.Title;
+                'AssignedUser' = $CurrentAssignedUser.DisplayName;
+                'Priority' = $Item.Priority.Name;
+                'Source' = $Item.Source.Name;
+                'CreatedDate' = $CreatedDateTimestamp;
+                'EffectiveCreatedDate' = $EffectiveCreatedDateTimestamp
+            }
 
-            $CurrentSR | Add-Member -Type NoteProperty -Name EffectiveCreatedDate -Value $EffectiveCreatedDateTimestamp #Date de création effective
+            #On convertit le dictionnaire en PSCustomObject
+            $CurrentSR = New-Object -TypeName PSCustomObject -Property $SRProperties
 
-			#Ajoute de l'objet dans le tableau
+			#Finalement, on ajoute le PSCustomObject dans le tableau
             $OutputSR += $CurrentSR
         }
 		#On retourne le tableau
@@ -170,67 +171,55 @@ Function Filter-IRData
 			$CurrentAffectedUser = Get-SCSMRelatedObject -SMObject $Item -Relationship $AffectedUserRelClass -ErrorAction Stop
 			$CurrentAssignedUser = Get-SCSMRelatedObject -SMObject $Item -Relationship $AssignedUserRelClass -ErrorAction Stop
 			$CurrentSLA = Get-SCSMRelatedObject -SMObject $Item -Relationship $SLARelClass -ErrorAction Stop
-			
-			#Création de l'object qui sera inséré dans le tableau
-			$CurrentIncident = New-Object System.Object
-			
-			#Ajout des propriétés à l'objet
-			
-			$CurrentIncident | Add-Member -Type NoteProperty -Name ID -Value $Item.Id #ID
-			$CurrentIncident | Add-Member -Type NoteProperty -Name Title -Value $Item.Title #Title
-			$CurrentIncident | Add-Member -Type NoteProperty -Name Priority -Value $Item.Priority #Priorité
-			
-			#Pour l'utilisateur attribué, remplacement du texte par "Non attribué" si texte = null
-			if ($CurrentAssignedUser -eq $null)
-			{
-				$CurrentIncident | Add-Member -Type NoteProperty -Name AssignedUser -Value "Non attribué"
-			}
-			else
-			{
-				$CurrentIncident | Add-Member -Type NoteProperty -Name AssignedUser -Value $CurrentAssignedUser.DisplayName #Assigned User
-			}
-			
-			$CurrentIncident | Add-Member -Type NoteProperty -Name AffectedUser -Value $CurrentAffectedUser.DisplayName #Affected User
-			
+            
+            #Si il n'y a pas d'utilisateur assigné, on affiche "Non attribué"
+            $AssignedUser = if ($CurrentAssignedUser -eq $null) { "Non attribué" } else { $CurrentAssignedUser.DisplayName }
+
 			#Pour la date de création, il faut la convertir en TimeZone locale puis, en temps UNIX
 			$CreatedDateTimestamp = Convert-ToUnixTimeSeconds -Date $Item.CreatedDate
-			$CurrentIncident | Add-Member -Type NoteProperty -Name CreatedDate -Value $CreatedDateTimestamp
 			
 			#Pour les SLA, si il y en a plusieurs, prendre celle qui est actuellement active.
 			$ActiveSLA = $null
 			
-			if ($CurrentSLA -ne $null -and $CurrentSLA.GetType() -eq [Object[]])
-			{
-				foreach ($ItemSLA in $CurrentSLA)
-				{
-					if (-not $ItemSLA.IsCancelled) #Si plusieurs SLAs, prendre celle qui n'est pas "Annulée"
-					{
+			if ($CurrentSLA -ne $null -and $CurrentSLA.GetType() -eq [Object[]]) {
+				foreach ($ItemSLA in $CurrentSLA) {
+					if (-not $ItemSLA.IsCancelled) {
+                        #Si plusieurs SLAs, prendre celle qui n'est pas "Annulée"
 						$ActiveSLA = $ItemSLA
 					}
 				}
-			}
-			else
-			{
+			} else {
 				$ActiveSLA = $CurrentSLA
 			}
 			
             #Quand les SLA n'ont pas étés appliqués, on n'exporte pas ces 2 propriétés.
             if ($ActiveSLA) {
 			    $ActiveSLATimestamp = Convert-ToUnixTimeSeconds -Date $ActiveSLA.TargetEndDate
-			    $CurrentIncident | Add-Member -Type NoteProperty -Name SLAEndDate -Value $ActiveSLATimestamp #Date de fin prévue
-			    $CurrentIncident | Add-Member -Type NoteProperty -Name SLAStatus -Value $ActiveSLA.Status.Name #Status SLA
+			    $ActiveSLAStatus =  $ActiveSLA.Status.Name
 			}
-
-			$CurrentIncident | Add-Member -Type NoteProperty -Name Source -Value $Item.Source #Source
 			
 			#Pour la notification sonore du nouvel incident -> il faut récuperer l'heure à laquelle le serveur à reçu les données.
 			$History = Get-SCSMObjectHistory -Object $Item
 			$EffectiveCreateDate = $History[0].History[0].LastModified
 			$EffectiveCreateTimestamp = Convert-ToUnixTimeSeconds -Date $EffectiveCreateDate
 			
-			#Ajout de l'objet de la date de création effective dans le tableau.
-			$CurrentIncident | Add-Member -Type NoteProperty -Name EffectiveCreateDate -Value $EffectiveCreateTimestamp #Date de création effective
-			
+            #On ajoute toutes les propriétés dans une OrderedDictionary
+            $IRProperties = [Ordered]@{
+                'ID' = $Item.Id;
+                'Title' = $Item.Title;
+                'Priority' = $Item.Priority;
+                'AssignedUser' = $AssignedUser;
+                'AffectedUser' = $CurrentAffectedUser.DisplayName;
+                'CreatedDate' = $CreatedDateTimestamp;
+                'SLAEndDate' = $ActiveSLATimestamp;
+                'SLAStatus' = $ActiveSLAStatus;
+                'Source' = $Item.Source;
+                'EffectiveCreateDate' = $EffectiveCreateTimestamp
+            }
+
+            #On convertit le dictionnaire en PSCustomObject
+            $CurrentIncident = New-Object -TypeName PSCustomObject -Property $IRProperties
+
 			#Ajout de l'objet dans le tableau des incidents
 			$OutputIR += $CurrentIncident
 		}
@@ -282,23 +271,24 @@ if ($FilteredSRCSV) {
 Write-Host "Requête, tri et export des SR terminé sans erreurs."
 
 #Création (si existe pas) et ajout de la DateTime::Now dans le fichier log
-if (Test-Path -Path $LOGFILEPATH)
-{
+if (Test-Path -Path $LOGFILEPATH) {
     Clear-Content -Path $LOGFILEPATH
     $Date = "{0}={1}" -f [Math]::Floor([double]::Parse((Get-Date -UFormat %s))), [DateTime]::Now
     Add-Content -Path $LOGFILEPATH -Value $Date
-}
-else
-{
+} else {
     New-Item -Path $LOGFILEPATH -ItemType File | Out-Null
     $Date = "{0}={1}" -f [Math]::Floor([double]::Parse((Get-Date -UFormat %s))), [DateTime]::Now
     Add-Content -Path $LOGFILEPATH -Value $Date
 }
 
-foreach ($Item in $Error) 
-{
+#Log de toutes les erreurs
+foreach ($Item in $Error) {
     Log-Error -Message $Item
 }
+
+#Clean
+Remove-Variable -Name 'AllIncidents', 'AllServiceRequests', 'FilteredIR', 'FilteredSR', 'FilteredIRCSV', 'FilteredSRCSV'
+[GC]::Collect()
 
 #Suppression du module SMLets
 Remove-Module SMLets -Force -ErrorAction SilentlyContinue
