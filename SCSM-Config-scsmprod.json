@@ -1,5 +1,5 @@
 {
-	"SCSMManagementServerFQDN": "s2mscscm2mgmt.s2.rpn.ch",
+	"SCSMManagementServerFQDN": "s2mscsm2mgmt.s2.rpn.ch",
 
 	"ScriptPath": "C:\\inetpub\\wwwroot\\SCSM-Display\\Scripts\\",
 	"WebPagePath": "C:\\inetpub\\wwwroot\\SCSM-Display\\WebPage\\",

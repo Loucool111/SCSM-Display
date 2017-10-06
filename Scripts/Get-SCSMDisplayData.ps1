@@ -10,14 +10,14 @@ function Log-Error
 	[CmdletBinding()]
 	param (
 		[Parameter(Mandatory = $true)]
-		[string]
-        $Message
+		[ErrorRecord]
+        $ErrorItem
 	)
 	
 	Process
 	{
 		$TimeStamp = Get-Date -Format 'yyy.MM.dd HH:mm:ss'
-        $Line = "$TimeStamp -> $Message"
+        $Line = "$TimeStamp -> " + $ErrorItem.Exception + " : " + $ErrorItem.InvocationInfo
         
         $CurrentDate = Get-Date -Format yyy-MM-dd
         $ErrorFileName = $LOGPATH + "Error-$CurrentDate.log"
@@ -283,7 +283,7 @@ if (Test-Path -Path $LOGFILEPATH) {
 
 #Log de toutes les erreurs
 foreach ($Item in $Error) {
-    Log-Error -Message $Item
+    Log-Error -ErrorItem $Item
 }
 
 #Clean
