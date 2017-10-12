@@ -30,6 +30,7 @@ div ::-webkit-scrollbar {
 
 html,body {
     height: 100%;
+    font-size: 1.175rem;
 }
 
 .half-col {

@@ -3,7 +3,6 @@
 error_reporting(-1);
 
 // CONFIG
-
 $config_file = fopen("..\SCSM-Config.json", "r") or die("Unable to open SCSM-Config.json file!");
 $config_content = fread($config_file, filesize("..\SCSM-Config.json"));
 fclose($config_file);
@@ -13,8 +12,7 @@ $config = json_decode($config_content, true);
 //Définition de la timezone par défaut
 date_default_timezone_set('Europe/Zurich');
 
-// CONSTANTES
-
+// VARIABLES GLOBALES ET CONSTANTES
 $CACHE_PATH = $config["CachePath"];
 $LOG_PATH = $config["LogPath"];
 
@@ -23,18 +21,17 @@ $SR_FILE_PATH = $CACHE_PATH . $config["ServiceRequestCacheFile"];
 
 $LATEST_UPDATE_FILE_PATH = $LOG_PATH . $config["LogFile"];
 
-$SCSM_PRIORITY = "Priority";
+$GLOBALS['SCSM_PRIORITY'] = "Priority";
+$GLOBALS['SCSM_UNASSIGNED'] = "Non attribué";
+
 $SCSM_STATUS_ACTIVE = "SLAInstance.Status.Active";
 $SCSM_STATUS_WARNING = "SLAInstance.Status.Warning";
 $SCSM_STATUS_VIOLATION = "SLAInstance.Status.Breached";
-$SCSM_UNASSIGNED = "Non attribué";
 $SCSM_SOURCE_PORTAL = "ServiceRequestSourceEnum.Portal";
 
 $SCSM_PRIORITY_TRANSLATIONS = array("ServiceRequestPriorityEnum.Low" => "Faible",
                                     "ServiceRequestPriorityEnum.Medium" => "Moyenne",
                                     "ServiceRequestPriorityEnum.High" => "Élevée");
-
-// VARIABLES GLOBALES
 
 $HTML_IR_Unassigned_Table = "";
 $HTML_IR_SLA_Table = "";
@@ -57,11 +54,11 @@ function convertTime($timestamp) {
 //Création des tables pour les incidents
 if (($handle = fopen($IR_FILE_PATH, "r")) !== FALSE) {
     while (($data = fgetcsv($handle, 0, ";")) !== FALSE) {
-        if ($data[2] != $SCSM_PRIORITY) {  //way to ignore the header
+        if ($data[2] != $GLOBALS['SCSM_PRIORITY']) {  //way to ignore the header
             if ($data[7] == $SCSM_STATUS_WARNING) {
                 $HTML_IR_SLA_Table .= "<tr class=\"alert-warning\" data-source=\"$data[8]\" data-effectivetimestamp=\"$data[9]\">";
                 foreach ($data as $key => $value) {
-                    if ($value == $SCSM_UNASSIGNED) {
+                    if ($value == $GLOBALS['SCSM_UNASSIGNED']) {
                         $HTML_IR_SLA_Table .= "<td class=\"IncidentUnassigned\">$value</td>";
                     } elseif ($value == $SCSM_STATUS_WARNING) {
                         $HTML_IR_SLA_Table .= '<td class="IncidentWarning"><i class="fa fa-exclamation-triangle fa-2x fa-align-center" aria-hidden="true"></i></td>';
@@ -75,7 +72,7 @@ if (($handle = fopen($IR_FILE_PATH, "r")) !== FALSE) {
             } elseif ($data[7] == $SCSM_STATUS_VIOLATION) {
                 $HTML_IR_SLA_Table .= "<tr class=\"alert-danger\" data-source=\"$data[8]\" data-effectivetimestamp=\"$data[9]\">";
                 foreach ($data as $key => $value) {
-                    if ($value == $SCSM_UNASSIGNED) {
+                    if ($value == $GLOBALS['SCSM_UNASSIGNED']) {
                         $HTML_IR_SLA_Table .= "<td class=\"IncidentUnassigned\">$value</td>";
                     } elseif ($value == $SCSM_STATUS_VIOLATION) {
                         $HTML_IR_SLA_Table .= '<td class="IncidentViolation"><i class="fa fa-exclamation-circle fa-2x fa-align-center" aria-hidden="true"></i></td>';
@@ -86,7 +83,7 @@ if (($handle = fopen($IR_FILE_PATH, "r")) !== FALSE) {
                     }
                 }
                 $HTML_IR_SLA_Table .= '</tr>';
-            } elseif ($data[3] == $SCSM_UNASSIGNED) {
+            } elseif ($data[3] == $GLOBALS['SCSM_UNASSIGNED']) {
                 $HTML_IR_Unassigned_Table .= "<tr data-source=\"$data[8]\" data-effectivetimestamp=\"$data[9]\">";
                 foreach ($data as $key => $value) {
                     if ($value == $SCSM_STATUS_ACTIVE) {
@@ -107,9 +104,9 @@ if (($handle = fopen($IR_FILE_PATH, "r")) !== FALSE) {
 function SortSRByAssignation($arrayToFill, $data) {
     $arrayToFill .= "<tr data-timestamp=" . $data[6] . ">";
     foreach ($data as $key => $value) {
-        if ($key == 2 && $value == null) {
-            $arrayToFill .= "<td class=\"UnassignedCell\">Non attribué</td>"; // Remplacer le texte et mettre la classe.
-        } elseif ($key != 4 && $key != 5 && $key != 6) {
+        if ($key == 2 && $value == $GLOBALS['SCSM_UNASSIGNED']) {
+            $arrayToFill .= "<td class=\"UnassignedCell\">" . $GLOBALS['SCSM_UNASSIGNED'] . "</td>"; // Remplacer le texte et mettre la classe.
+        } elseif ($key != 3 &&$key != 4 && $key != 5 && $key != 6) {
             $arrayToFill .= "<td>$value</td>";
         }
     }
@@ -120,8 +117,8 @@ function SortSRByAssignation($arrayToFill, $data) {
 //Création des tables pour les SR
 if (($handle = fopen($SR_FILE_PATH, "r")) !== FALSE) {
     while (($data = fgetcsv($handle, 0, ";")) !== FALSE) {
-        if ($data[3] != $SCSM_PRIORITY) {
-            if ($data[2] == null) {
+        if ($data[3] != $GLOBALS['SCSM_PRIORITY']) {
+            if ($data[2] == $GLOBALS['SCSM_UNASSIGNED']) {
                 if ($data[4] == $SCSM_SOURCE_PORTAL) {
                     $HTML_SR_Unassigned_Table = SortSRByAssignation($HTML_SR_Unassigned_Table, $data);
                 }
@@ -179,7 +176,7 @@ header("Expires: Sat, 26 Jul 1997 05:00:00 GMT"); // Date dans le passé
                 </span>
             </div>
         </nav>
-        <div class="container-fluid" style="height: 92%;">
+        <div class="container-fluid" style="height: 93%;">
             <div class="row" style="height: 100%;">
                 <div class="col half-col">
                     <div class="card card-outline-info custom-card">
@@ -194,7 +191,7 @@ header("Expires: Sat, 26 Jul 1997 05:00:00 GMT"); // Date dans le passé
                                         <th>Attribué à</th>
                                         <th>Utilisateur affecté</th>
                                         <th>Date de création</th>
-                                        <th>Date de fin prévue</th>
+                                        <th>Fin prévue</th>
                                         <th>Statut</th>
                                     </tr>
                                 </thead>
@@ -218,7 +215,7 @@ header("Expires: Sat, 26 Jul 1997 05:00:00 GMT"); // Date dans le passé
                                         <th>Attribué à</th>
                                         <th>Utilisateur affecté</th>
                                         <th>Date de création</th>
-                                        <th>Date de fin prévue</th>
+                                        <th>Fin prévue</th>
                                         <th>Statut</th>
                                     </tr>
                                 </thead>
@@ -240,7 +237,6 @@ header("Expires: Sat, 26 Jul 1997 05:00:00 GMT"); // Date dans le passé
                                         <th>ID</th>
                                         <th>Titre</th>
                                         <th>Attribué à</th>
-                                        <th>Priorité</th>
                                     </tr>
                                 </thead>
                                 <tbody id="SRUnassignedBody">
@@ -260,7 +256,6 @@ header("Expires: Sat, 26 Jul 1997 05:00:00 GMT"); // Date dans le passé
                                         <th>ID</th>
                                         <th>Titre</th>
                                         <th>Attribué à</th>
-                                        <th>Priorité</th>
                                     </tr>
                                 </thead>
                                 <tbody id="SRAssignedBody">

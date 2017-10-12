@@ -10,14 +10,14 @@ function Log-Error
 	[CmdletBinding()]
 	param (
 		[Parameter(Mandatory = $true)]
-		[ErrorRecord]
+		[System.Management.Automation.ErrorRecord]
         $ErrorItem
 	)
 	
 	Process
 	{
 		$TimeStamp = Get-Date -Format 'yyy.MM.dd HH:mm:ss'
-        $Line = "$TimeStamp -> " + $ErrorItem.Exception + " : " + $ErrorItem.InvocationInfo
+        $Line = "$TimeStamp -> " + $ErrorItem.ToString() + " : " + $ErrorItem.InvocationInfo.PositionMessage
         
         $CurrentDate = Get-Date -Format yyy-MM-dd
         $ErrorFileName = $LOGPATH + "Error-$CurrentDate.log"
@@ -131,7 +131,7 @@ Function Filter-SRData
             $SRProperties = [Ordered]@{
                 'ID' = $Item.Id;
                 'Title' = $Item.Title;
-                'AssignedUser' = $CurrentAssignedUser.DisplayName;
+                'AssignedUser' = if ($CurrentAssignedUser.Initials -ne $null) { $CurrentAssignedUser.Initials.ToUpper() } else { "Non attribué" };
                 'Priority' = $Item.Priority.Name;
                 'Source' = $Item.Source.Name;
                 'CreatedDate' = $CreatedDateTimestamp;
