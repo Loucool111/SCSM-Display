@@ -87,8 +87,8 @@ $AffectedUserRelClass = Get-SCSMRelationshipClass -Name 'System.WorkItemAffected
 $AssignedUserRelClass = Get-SCSMRelationshipClass -Name 'System.WorkItemAssignedToUser$'   #Classe de relation : attribué à
 $SLARelClass = Get-SCSMRelationshipClass -Name 'System.WorkItemHasSLAInstanceInformation$' #Classe de relation : SLA
 
-$IRStatusActive = Get-SCSMEnumeration -Name 'IncidentStatusEnum.Active'                    #Status d'un IR : "Actif"
-$SRStatusInProgress = Get-SCSMEnumeration -Name 'ServiceRequestStatusEnum.InProgress'      #Status d'une SR : "En cours"
+$IRStatusActive = Get-SCSMEnumeration -Name 'IncidentStatusEnum.Active$'                    #Status d'un IR : "Actif"
+$SRStatusInProgress = Get-SCSMEnumeration -Name 'ServiceRequestStatusEnum.InProgress$'      #Status d'une SR : "En cours"
 $SRStatusNew = Get-SCSMEnumeration -Name 'ServiceRequestStatusEnum.New'                    #Status d'une SR : "Nouveau"
 
 #Récuperation de tous les IR qui sont actifs
